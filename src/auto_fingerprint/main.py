@@ -23,20 +23,23 @@ class SourceCodeParser:
         self.base_dir = base_dir
         self.source_core_file_suffix = manifest["source_core_file_suffix"]
         if manifest["language"] == "python":
-            self.parser = self.python_parser()
+            self.parser = self.__python_parser()
         else:
             raise ValueError(f"Unsupported language: {manifest['language']}")
     
-    def python_parser() -> Parser:
-      parser = Parser(PY_LANGUAGE)
-      return parser
-    
-    def get_files(self, base_dir):
+   
+    def get_files(self, base_dir) -> Generator[tuple[str, list[str]], None, None]:
         for f in list(Path(base_dir).rglob(f"*{self.source_core_file_suffix}")):
             with open(f, "r") as f:
-                yield f.read()
+                function_str = f.read()
+                yield f.name, self.__extract_functions_from_code(function_str)
+
+    def __python_parser(self) -> Parser:
+
+      parser = Parser(PY_LANGUAGE)
+      return parser
                 
-    def traverse_tree(self, tree: Tree) -> Generator[Node, None, None]:
+    def __traverse_tree(self, tree: Tree) -> Generator[Node, None, None]:
         cursor = tree.walk()
 
         visited_children = False
@@ -50,11 +53,11 @@ class SourceCodeParser:
             elif not cursor.goto_parent():
                 break
             
-    def extract_functions_from_code(self, code):
+    def __extract_functions_from_code(self, code: str) -> list[str]:
         tree = self.parser.parse(bytes(code, "utf8"))
         
         # Filter for function definitions and map them to their code snippets
-        function_nodes = filter(lambda node: node.type == "function_definition", self.traverse_tree(tree))
+        function_nodes = filter(lambda node: node.type == "function_definition", self.__traverse_tree(tree))
         functions = list(map(lambda node: code[node.start_byte:node.end_byte], function_nodes))
         
         return functions
@@ -158,10 +161,9 @@ def main():
     source_code_parser = SourceCodeParser(dir_to_read, manifest)
     
     # Read all the files in the directory and embed them
-    for file in source_code_parser.get_files(dir_to_read):
-        functions = source_code_parser.extract_functions_from_code(file)
-        print(f"found {len(functions)} functions in {file}")
-        chunk_id_to_text = create_embeddings_index(functions, file.name, db)
+    for file_name, functions in source_code_parser.get_files(dir_to_read):
+        print(f"found {len(functions)} functions in {file_name}")
+        chunk_id_to_text = create_embeddings_index(functions, file_name, db)
         
         db.upload_points(chunk_id_to_text)
         print(f"uploaded points")
