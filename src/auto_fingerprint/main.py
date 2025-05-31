@@ -49,21 +49,21 @@ class SourceCodeParser:
                 visited_children = False
             elif not cursor.goto_parent():
                 break
+            
+    def extract_functions_from_code(self, code):
+        tree = self.parser.parse(bytes(code, "utf8"))
+        
+        # Filter for function definitions and map them to their code snippets
+        function_nodes = filter(lambda node: node.type == "function_definition", self.traverse_tree(tree))
+        functions = list(map(lambda node: code[node.start_byte:node.end_byte], function_nodes))
+        
+        return functions
 
 # For bad reasons, qdrant doesnt support hex strings as ids. only UUIDs
 # So lets convert the sha256 hash to a UUID
 def derive_id(function_str: str) -> str:
     sha2 = hashlib.sha256(function_str.encode('utf-8')).hexdigest()[32:]
     return sha2[0:8] + "-" + sha2[8:12] + "-" + sha2[12:16] + "-" + sha2[16:20] + "-" + sha2[20:]
-
-def extract_functions_from_code(code, parser):
-    tree = parser.parse(bytes(code, "utf8"))
-    
-    # Filter for function definitions and map them to their code snippets
-    function_nodes = filter(lambda node: node.type == "function_definition", traverse_tree(tree))
-    functions = list(map(lambda node: code[node.start_byte:node.end_byte], function_nodes))
-    
-    return functions
 
 def get_embedding(text: str):
     response = openai.Embedding.create(
@@ -72,8 +72,7 @@ def get_embedding(text: str):
     )
     return np.array(response['data'][0]['embedding'], dtype=np.float32)
 
-def create_embeddings_index(code_chunks: list[str], file_name: str, qdrant_client: QdrantClient) -> tuple[faiss.IndexFlatL2, dict[str, dict]]:
-    index = faiss.IndexFlatL2(VECTOR_DIMENSION)
+def create_embeddings_index(code_chunks: list[str], file_name: str, qdrant_client: QdrantClient) -> dict[str, dict]:
     chunk_id_to_text = {}
 
     # Embed and index the code
@@ -84,14 +83,13 @@ def create_embeddings_index(code_chunks: list[str], file_name: str, qdrant_clien
             continue
         
         embedding = get_embedding(chunk)
-        index.add(np.array([embedding]))
         chunk_id_to_text[sha2] = {
             "file_name": file_name,
             "function_str": chunk,
             "embedding": embedding
         }
         
-    return index, chunk_id_to_text
+    return chunk_id_to_text
 
 class QuadrantClient:
     collection_name = "electrum_code_chunks"
@@ -147,7 +145,6 @@ def main():
     db = QuadrantClient()
     db.create_collections()
     
-    parser = python_parser()
     dir_to_read = args[0]
     
     # Read the manifest file
@@ -162,9 +159,9 @@ def main():
     
     # Read all the files in the directory and embed them
     for file in source_code_parser.get_files(dir_to_read):
-        functions = extract_functions_from_code(file, parser)
+        functions = source_code_parser.extract_functions_from_code(file)
         print(f"found {len(functions)} functions in {file}")
-        index, chunk_id_to_text = create_embeddings_index(functions, file.name, db)
+        chunk_id_to_text = create_embeddings_index(functions, file.name, db)
         
         db.upload_points(chunk_id_to_text)
         print(f"uploaded points")
