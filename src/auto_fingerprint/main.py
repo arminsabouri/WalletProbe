@@ -147,41 +147,94 @@ class ResponseCollector:
         self.responses = {} 
         
     def tx_version(self):
-        res = self.vector_db.query("Transaction creation")
-        for result in res: 
-            response = self.llm.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[
-                    {"role": "system", "content": "You are a helpful assistant."},
-                    {"role": "user", "content": f"What transaction version is used in the following code? Only return a number or -1 if unclear.\n\n{result.payload['function_str']}"}
-                ],
-                max_tokens=16
-            )
-            res = response.choices[0].message.content
-            print("OPEN AI RESPONSE tx version: ", res, type(res))
-            if res != "-1":
-                self.responses["tx_version"] = int(res)
-                return
-        self.responses["tx_version"] = -1
+        queries = [
+            "transaction version number definition",
+            "transaction version initialization",
+            "tx version setting"
+        ]
+        relevant_chunks = []
+        for query in queries:
+            results = self.vector_db.query(query)
+            relevant_chunks.extend([r.payload['function_str'] for r in results[:3]])
+        relevant_chunks = list(set(relevant_chunks))
+        
+        system_prompt = """
+        You are a code analysis assistant. Your task is to identify the transaction version 
+        number used in Bitcoin-related code. Look for:
+        - Version numbers in transaction creation
+        - Default version values
+        - Version constants or definitions
+        Only return a single number, or -1 if the version cannot be determined.
+        """
+        
+        user_prompt = "What transaction version number is used in the following code? Only return a number or -1 if unclear.\n\n"
+        user_prompt += "\n\n---\n\n".join(relevant_chunks)
+        
+        response = self.llm.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ],
+            max_tokens=16
+        )
+        res = response.choices[0].message.content
+        print("OPEN AI RESPONSE tx version: ", res)
+        
+        try:
+            self.responses["tx_version"] = int(res) if res != "-1" else -1
+        except ValueError:
+            self.responses["tx_version"] = -1
         
     def bip69_sorting(self):
-        res = self.vector_db.query("BIP69 sorting")
-        for result in res: 
-            response = self.llm.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[
-                    {"role": "system", "content": "You are a helpful assistant."},
-                    {"role": "user", "content": f"Does the following code use BIP69 sorting? Only return 1 or 0 or -1 if unclear.\n\n{result.payload['function_str']}"}
-                ],
-                max_tokens=16
-            )
-            res = response.choices[0].message.content
-            print("OPEN AI RESPONSE bip69 sorting: ", res)
-            if res != "-1":
-                self.responses["bip69_sorting"] = int(res)
-                return
-        self.responses["bip69_sorting"] = -1
-   
+        queries = [
+            "BIP69 sorting implementation",
+            "transaction input output sorting",
+            "lexicographical sorting of transactions",
+            "BIP69 compliance check"
+        ]
+        relevant_chunks = []
+        
+        # Gather multiple relevant chunks
+        for query in queries:
+            results = self.vector_db.query(query)
+            relevant_chunks.extend([r.payload['function_str'] for r in results[:3]])
+        
+        # Deduplicate chunks
+        relevant_chunks = list(set(relevant_chunks))
+        
+        system_prompt = """
+        You are a code analysis assistant. Your task is to determine if the code implements 
+        BIP69 sorting for Bitcoin transactions. Look for:
+        - Lexicographical sorting of inputs/outputs
+        - References to BIP69 in comments or function names
+        - Sorting of transaction inputs by (txid, vout)
+        - Sorting of outputs by (amount, scriptPubKey)
+        Only return:
+        1 - if BIP69 sorting is clearly implemented
+        0 - if BIP69 sorting is clearly not implemented
+        -1 - if it cannot be determined
+        """
+        
+        user_prompt = "Does the following code implement BIP69 sorting? Only return 1, 0, or -1 if unclear.\n\n"
+        user_prompt += "\n\n---\n\n".join(relevant_chunks)
+        
+        response = self.llm.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ],
+            max_tokens=16
+        )
+        res = response.choices[0].message.content
+        print("OPEN AI RESPONSE bip69 sorting: ", res)
+        
+        try:
+            self.responses["bip69_sorting"] = int(res) if res in ["0", "1", "-1"] else -1
+        except ValueError:
+            self.responses["bip69_sorting"] = -1
+        
 def main():
     args = sys.argv[1:]
     if len(args) != 1:
