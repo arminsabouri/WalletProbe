@@ -1,5 +1,6 @@
 #! /usr/bin/env python3
 
+import re
 import openai
 import numpy as np
 import tree_sitter_python as tspython
@@ -137,6 +138,47 @@ class QuadrantClient:
             limit=10
         )
         return res
+    
+class ResponseCollector:
+    def __init__(self, vector_db: QuadrantClient):
+        self.vector_db = vector_db
+        self.responses = {} 
+        
+    def tx_version(self):
+        res = self.vector_db.query("Transaction creation")
+        for result in res: 
+            response = openai.ChatCompletion.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {"role": "system", "content": "You are a helpful assistant."},
+                    {"role": "user", "content": f"What transaction version is used in the following code? Only return a number or -1 if unclear.\n\n{result.payload['function_str']}"}
+                ],
+                max_tokens=16
+            )
+            res = response.choices[0].message.content
+            print("OPEN AI RESPONSE tx version: ", res, type(res))
+            if res != "-1":
+                self.responses["tx_version"] = int(res)
+                return
+        self.responses["tx_version"] = -1
+        
+    def bip69_sorting(self):
+        res = self.vector_db.query("BIP69 sorting")
+        for result in res: 
+            response = openai.ChatCompletion.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {"role": "system", "content": "You are a helpful assistant."},
+                    {"role": "user", "content": f"Does the following code use BIP69 sorting? Only return 1 or 0 or -1 if unclear.\n\n{result.payload['function_str']}"}
+                ],
+                max_tokens=16
+            )
+            res = response.choices[0].message.content
+            print("OPEN AI RESPONSE bip69 sorting: ", res)
+            if res != "-1":
+                self.responses["bip69_sorting"] = int(res)
+                return
+        self.responses["bip69_sorting"] = -1
    
 def main():
     args = sys.argv[1:]
@@ -168,15 +210,15 @@ def main():
         db.upload_points(chunk_id_to_text)
         print(f"uploaded points")
         
-    res = db.query("Transaction creation")
-    for result in res: 
-        print("-", result.id, result.payload["file_name"], result.payload["function_str"])
-        
-    print('--------------------------------')
+    response_collector = ResponseCollector(db)
+    response_collector.tx_version()
+    response_collector.bip69_sorting()
+    print(response_collector.responses)
+    # print('--------------------------------')
     
-    res = db.query("BIP69 sorting")
-    for result in res: 
-        print("-", result.id, result.payload["file_name"], result.payload["function_str"])
+    # res = db.query("BIP69 sorting")
+    # for result in res: 
+    #     print("-", result.id, result.payload["file_name"], result.payload["function_str"])
 
 
 if __name__ == "__main__":
