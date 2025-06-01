@@ -69,14 +69,14 @@ def derive_id(function_str: str) -> str:
     sha2 = hashlib.sha256(function_str.encode('utf-8')).hexdigest()[32:]
     return sha2[0:8] + "-" + sha2[8:12] + "-" + sha2[12:16] + "-" + sha2[16:20] + "-" + sha2[20:]
 
-def get_embedding(text: str):
-    response = openai.Embedding.create(
+def get_embedding(client: openai.OpenAI, text: str):
+    response = client.embeddings.create(
         input=text,
         model="text-embedding-3-small"  # or text-embedding-3-large
     )
-    return np.array(response['data'][0]['embedding'], dtype=np.float32)
+    return np.array(response.data[0].embedding, dtype=np.float32)
 
-def create_embeddings_index(code_chunks: list[str], file_name: str, qdrant_client: QdrantClient) -> dict[str, dict]:
+def create_embeddings_index(client: openai.OpenAI, code_chunks: list[str], file_name: str, qdrant_client: QdrantClient) -> dict[str, dict]:
     chunk_id_to_text = {}
 
     # Embed and index the code
@@ -86,7 +86,7 @@ def create_embeddings_index(code_chunks: list[str], file_name: str, qdrant_clien
         if qdrant_client.point_exists(sha2):
             continue
         
-        embedding = get_embedding(chunk)
+        embedding = get_embedding(client, chunk)
         chunk_id_to_text[sha2] = {
             "file_name": file_name,
             "function_str": chunk,
@@ -97,7 +97,8 @@ def create_embeddings_index(code_chunks: list[str], file_name: str, qdrant_clien
 
 class QuadrantClient:
     collection_name = "electrum_code_chunks"
-    def __init__(self):
+    def __init__(self, client: openai.OpenAI):
+        self.client = client
         self.qdrant_client = QdrantClient(path="./data.qdrant", prefer_grpc=False)
         
     def create_collections(self) -> None:
@@ -131,7 +132,7 @@ class QuadrantClient:
         )
         
     def query(self, query: str) -> list[dict]:
-        query_vec = get_embedding(query)
+        query_vec = get_embedding(self.client, query)
         res = self.qdrant_client.search(
             collection_name=self.collection_name,
             query_vector=query_vec,
@@ -140,14 +141,15 @@ class QuadrantClient:
         return res
     
 class ResponseCollector:
-    def __init__(self, vector_db: QuadrantClient):
+    def __init__(self, vector_db: QuadrantClient, llm: openai.OpenAI):
         self.vector_db = vector_db
+        self.llm = llm
         self.responses = {} 
         
     def tx_version(self):
         res = self.vector_db.query("Transaction creation")
         for result in res: 
-            response = openai.ChatCompletion.create(
+            response = self.llm.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[
                     {"role": "system", "content": "You are a helpful assistant."},
@@ -165,7 +167,7 @@ class ResponseCollector:
     def bip69_sorting(self):
         res = self.vector_db.query("BIP69 sorting")
         for result in res: 
-            response = openai.ChatCompletion.create(
+            response = self.llm.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[
                     {"role": "system", "content": "You are a helpful assistant."},
@@ -186,8 +188,11 @@ def main():
         print("Usage: python main.py <file>")
         sys.exit(1)
     
+    # Initialize the openai client
+    openai_client = openai.OpenAI()
+    
     # Initialize the db
-    db = QuadrantClient()
+    db = QuadrantClient(openai_client)
     db.create_collections()
     
     dir_to_read = args[0]
@@ -200,26 +205,21 @@ def main():
     except FileNotFoundError:
         raise ValueError(f"Manifest file not found in {dir_to_read}")
     
+    # Initialize the source code parser
     source_code_parser = SourceCodeParser(dir_to_read, manifest)
     
     # Read all the files in the directory and embed them
     for file_name, functions in source_code_parser.get_files(dir_to_read):
         print(f"found {len(functions)} functions in {file_name}")
-        chunk_id_to_text = create_embeddings_index(functions, file_name, db)
+        chunk_id_to_text = create_embeddings_index(openai_client, functions, file_name, db)
         
         db.upload_points(chunk_id_to_text)
         print(f"uploaded points")
         
-    response_collector = ResponseCollector(db)
+    response_collector = ResponseCollector(db, openai_client)
     response_collector.tx_version()
     response_collector.bip69_sorting()
     print(response_collector.responses)
-    # print('--------------------------------')
-    
-    # res = db.query("BIP69 sorting")
-    # for result in res: 
-    #     print("-", result.id, result.payload["file_name"], result.payload["function_str"])
-
 
 if __name__ == "__main__":
     main()
