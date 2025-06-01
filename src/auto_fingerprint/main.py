@@ -1,6 +1,5 @@
 #! /usr/bin/env python3
 
-import re
 import openai
 import numpy as np
 import tree_sitter_python as tspython
@@ -18,6 +17,7 @@ import hashlib
 
 PY_LANGUAGE = Language(tspython.language())
 VECTOR_DIMENSION = 1536
+OPEN_AI_MODEL = "gpt-4o-mini"
 
 
 class SourceCodeParser:
@@ -157,6 +157,13 @@ class ResponseCollector:
         self.vector_db = vector_db
         self.llm = llm
         self.responses = {}
+        self.chat_history = []
+
+    def save_results(self, wallet_name: str, wallet_version: str):
+        key = f"{wallet_name}:{wallet_version}"
+        value = json.dumps(self.responses)
+        # TODO
+        # rocksdb.put(key.encode('utf-8'), value.encode('utf-8'))
 
     def tx_version(self):
         queries = [
@@ -183,16 +190,17 @@ class ResponseCollector:
         user_prompt = "What transaction version number is used in the following code? Only return a number or -1 if unclear.\n\n"
         user_prompt += "\n\n---\n\n".join(relevant_chunks)
 
+        self._add_to_chat_history("user", user_prompt)
+
         response = self.llm.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt}
-            ],
+            model=OPEN_AI_MODEL,
+            messages=self.chat_history,
             max_tokens=16
         )
         res = response.choices[0].message.content
         print("OPEN AI RESPONSE tx version: ", res)
+
+        self._add_to_chat_history("assistant", res)
 
         try:
             self.responses["tx_version"] = int(res) if res != "-1" else -1
@@ -233,22 +241,74 @@ class ResponseCollector:
         user_prompt = "Does the following code implement BIP69 sorting? Only return 1, 0, or -1 if unclear.\n\n"
         user_prompt += "\n\n---\n\n".join(relevant_chunks)
 
+        self._add_to_chat_history("user", user_prompt)
+
         response = self.llm.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt}
-            ],
+            model=OPEN_AI_MODEL,
+            messages=self.chat_history,
             max_tokens=16
         )
         res = response.choices[0].message.content
         print("OPEN AI RESPONSE bip69 sorting: ", res)
+
+        self._add_to_chat_history("assistant", res)
 
         try:
             self.responses["bip69_sorting"] = int(
                 res) if res in ["0", "1", "-1"] else -1
         except ValueError:
             self.responses["bip69_sorting"] = -1
+
+    def mixed_input_types(self):
+        queries = [
+            "transaction input type mixing",
+            "combine different input types",
+            "segwit legacy input combination",
+            "transaction input validation",
+            "input script type checking"
+        ]
+        relevant_chunks = []
+        for query in queries:
+            results = self.vector_db.query(query)
+            relevant_chunks.extend([r.payload['function_str']
+                                   for r in results[:3]])
+        relevant_chunks = list(set(relevant_chunks))
+
+        task_prompt = """
+        Analyze the following code to determine if the wallet supports mixing different 
+        Bitcoin transaction input types in the same transaction. 
+        Look for:
+        - Code that handles multiple input types (legacy, segwit, native segwit, taproot)
+        - Input type validation or restrictions
+        - Transaction building logic that processes different input formats
+        - Comments or logic related to input type compatibility
+        Only return:
+        1 - if mixed input types are clearly supported
+        0 - if mixed input types are explicitly prevented
+        -1 - if it cannot be determined
+        """
+
+        self._add_to_chat_history(
+            "user", f"{task_prompt}\n\n" + "\n\n---\n\n".join(relevant_chunks))
+
+        response = self.llm.chat.completions.create(
+            model=OPEN_AI_MODEL,
+            messages=self.chat_history,
+            max_tokens=16
+        )
+        res = response.choices[0].message.content
+        print("OPEN AI RESPONSE mixed input types: ", res)
+
+        self._add_to_chat_history("assistant", res)
+
+        try:
+            self.responses["mixed_input_types"] = int(
+                res) if res in ["0", "1", "-1"] else -1
+        except ValueError:
+            self.responses["mixed_input_types"] = -1
+
+    def _add_to_chat_history(self, role: str, content: str):
+        self.chat_history.append({"role": role, "content": content})
 
 
 def main():
@@ -289,6 +349,7 @@ def main():
     response_collector = ResponseCollector(db, openai_client)
     response_collector.tx_version()
     response_collector.bip69_sorting()
+    response_collector.mixed_input_types()
     print(response_collector.responses)
 
 
