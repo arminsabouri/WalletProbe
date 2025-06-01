@@ -1,5 +1,6 @@
 {
     "language": "python",
     "version": "3.10",
-    "source_core_file_suffix": ".py"
+    "source_core_file_suffix": ".py",
+    "name": "electrum"
 }

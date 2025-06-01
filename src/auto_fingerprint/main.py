@@ -309,6 +309,47 @@ class ResponseCollector:
         except ValueError:
             self.responses["mixed_input_types"] = -1
 
+    def input_types(self):
+        # Define all possible input types we want to detect
+        input_type_queries = [
+            "legacy P2PKH input handling",
+            "P2SH input implementation",
+            "native segwit P2WPKH input",
+            "native segwit P2WSH input",
+            "P2SH-wrapped segwit input",
+            "P2TR taproot input support",
+            "multisig input handling",
+        ]
+
+        relevant_chunks = []
+        for query in input_type_queries:
+            results = self.vector_db.query(query)
+            relevant_chunks.extend([r.payload['function_str']
+                                   for r in results[:3]])
+        relevant_chunks = list(set(relevant_chunks))
+
+        task_prompt = """
+        Analyze the following code to identify which Bitcoin transaction input types are supported.
+        Return a list of just comman seperated strings containing only the supported input types from the list above.
+        If no input types can be determined, return -1. Do not return any other text.
+        Example response: P2PKH, P2WPKH, P2TR
+        """
+
+        self._add_to_chat_history(
+            "user", f"{task_prompt}\n\n" + "\n\n---\n\n".join(relevant_chunks))
+
+        response = self.llm.chat.completions.create(
+            model=OPEN_AI_MODEL,
+            messages=self.chat_history,
+            max_tokens=100  # Increased token limit for JSON array response
+        )
+        res = response.choices[0].message.content
+        print("OPEN AI RESPONSE input types: ", res)
+
+        self._add_to_chat_history("assistant", res)
+
+        self.responses["input_types"] = res
+
     def _add_to_chat_history(self, role: str, content: str):
         self.chat_history.append({"role": role, "content": content})
 
@@ -352,9 +393,13 @@ def main():
     response_collector.tx_version()
     response_collector.bip69_sorting()
     response_collector.mixed_input_types()
+    response_collector.input_types()
+
     print(response_collector.responses)
 
+    # Save the results to the lmdb database
     env = lmdb.open('fingerprints.lmdb', map_size=10**9)  # 1 GB
+    response_collector.save_results(env, manifest["name"], manifest["version"])
 
 
 if __name__ == "__main__":
