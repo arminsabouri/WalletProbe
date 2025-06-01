@@ -14,6 +14,8 @@ from qdrant_client import QdrantClient
 from qdrant_client.models import PointStruct, VectorParams, Distance, Filter, FieldCondition, MatchValue
 import hashlib
 
+import lmdb
+
 
 PY_LANGUAGE = Language(tspython.language())
 VECTOR_DIMENSION = 1536
@@ -159,11 +161,11 @@ class ResponseCollector:
         self.responses = {}
         self.chat_history = []
 
-    def save_results(self, wallet_name: str, wallet_version: str):
+    def save_results(self, lmdb_env: lmdb.Environment, wallet_name: str, wallet_version: str):
         key = f"{wallet_name}:{wallet_version}"
         value = json.dumps(self.responses)
-        # TODO
-        # rocksdb.put(key.encode('utf-8'), value.encode('utf-8'))
+        with lmdb_env.begin(write=True) as txn:
+            txn.put(key.encode('utf-8'), value.encode('utf-8'))
 
     def tx_version(self):
         queries = [
@@ -351,6 +353,8 @@ def main():
     response_collector.bip69_sorting()
     response_collector.mixed_input_types()
     print(response_collector.responses)
+
+    env = lmdb.open('fingerprints.lmdb', map_size=10**9)  # 1 GB
 
 
 if __name__ == "__main__":

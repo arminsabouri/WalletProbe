@@ -29,3 +29,6 @@ dist/
 
 # Qdrant db files
 *.qdrant/
+
+# LMDB db files
+*.lmdb/
