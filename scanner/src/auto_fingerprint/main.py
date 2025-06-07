@@ -107,10 +107,10 @@ def create_embeddings_index(client: openai.OpenAI, code_chunks: list[str], file_
 class QuadrantClient:
     collection_name = "electrum_code_chunks"
 
-    def __init__(self, client: openai.OpenAI):
+    def __init__(self, client: openai.OpenAI, vector_db_path: str):
         self.client = client
         self.qdrant_client = QdrantClient(
-            path="./data.qdrant", prefer_grpc=False)
+            path=vector_db_path, prefer_grpc=False)
 
     def create_collections(self) -> None:
         if not self.qdrant_client.get_collection(self.collection_name):
@@ -356,18 +356,18 @@ class ResponseCollector:
 
 def main():
     args = sys.argv[1:]
-    if len(args) != 1:
-        print("Usage: python main.py <file>")
+    if len(args) < 1:
+        print("Usage: python main.py <file> <vector_db_path> <fingerprint_db_path>")
         sys.exit(1)
-
+    dir_to_read = args[0]
+    vector_db_path = args[1] 
+    fingerprint_db_path = args[2]
     # Initialize the openai client
     openai_client = openai.OpenAI()
 
     # Initialize the db
-    db = QuadrantClient(openai_client)
+    db = QuadrantClient(openai_client, vector_db_path)
     db.create_collections()
-
-    dir_to_read = args[0]
 
     # Read the manifest file
     manifest = None
@@ -398,7 +398,7 @@ def main():
     print(response_collector.responses)
 
     # Save the results to the lmdb database
-    env = lmdb.open('fingerprints.lmdb', map_size=10**9)  # 1 GB
+    env = lmdb.open(fingerprint_db_path, map_size=10**9)  # 1 GB
     response_collector.save_results(env, manifest["name"], manifest["version"])
 
 
