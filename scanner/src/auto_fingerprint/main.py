@@ -107,13 +107,13 @@ def create_embeddings_index(client: openai.OpenAI, code_chunks: list[str], file_
 class QuadrantClient:
     collection_name = "electrum_code_chunks"
 
-    def __init__(self, client: openai.OpenAI, vector_db_path: str):
+    def __init__(self, client: openai.OpenAI, vector_db_uri: str):
         self.client = client
         self.qdrant_client = QdrantClient(
-            path=vector_db_path, prefer_grpc=False)
+            url=vector_db_uri)
 
     def create_collections(self) -> None:
-        if not self.qdrant_client.get_collection(self.collection_name):
+        if not self.qdrant_client.collection_exists(self.collection_name):
             self.qdrant_client.create_collection(
                 collection_name=self.collection_name,
                 vectors_config=VectorParams(
@@ -139,10 +139,11 @@ class QuadrantClient:
                 )
             )
 
-        self.qdrant_client.upsert(
-            collection_name=self.collection_name,
-            points=points
-        )
+        if len(points) > 0:
+            self.qdrant_client.upsert(
+                collection_name=self.collection_name,
+                points=points
+            )
 
     def query(self, query: str) -> list[dict]:
         query_vec = get_embedding(self.client, query)
@@ -177,7 +178,7 @@ class ResponseCollector:
         for query in queries:
             results = self.vector_db.query(query)
             relevant_chunks.extend([r.payload['function_str']
-                                   for r in results[:3]])
+                                   for r in results])
         relevant_chunks = list(set(relevant_chunks))
 
         system_prompt = """
@@ -222,7 +223,7 @@ class ResponseCollector:
         for query in queries:
             results = self.vector_db.query(query)
             relevant_chunks.extend([r.payload['function_str']
-                                   for r in results[:3]])
+                                   for r in results])
 
         # Deduplicate chunks
         relevant_chunks = list(set(relevant_chunks))
@@ -273,7 +274,7 @@ class ResponseCollector:
         for query in queries:
             results = self.vector_db.query(query)
             relevant_chunks.extend([r.payload['function_str']
-                                   for r in results[:3]])
+                                   for r in results])
         relevant_chunks = list(set(relevant_chunks))
 
         task_prompt = """
@@ -325,7 +326,7 @@ class ResponseCollector:
         for query in input_type_queries:
             results = self.vector_db.query(query)
             relevant_chunks.extend([r.payload['function_str']
-                                   for r in results[:3]])
+                                   for r in results])
         relevant_chunks = list(set(relevant_chunks))
 
         task_prompt = """
@@ -350,6 +351,197 @@ class ResponseCollector:
 
         self.responses["input_types"] = res
 
+    def low_r_grinding(self):
+        queries = [
+            "low R signature grinding",
+            "ECDSA signature R value minimization",
+            "low R value generation",
+            "deterministic ECDSA signature grinding",
+            "compact signature generation"
+        ]
+        relevant_chunks = []
+        for query in queries:
+            results = self.vector_db.query(query)
+            relevant_chunks.extend([r.payload['function_str']
+                                   for r in results])
+        relevant_chunks = list(set(relevant_chunks))
+
+        task_prompt = """
+        Analyze the following code to determine if it implements 'Low R' signature grinding for ECDSA signatures.
+        Look for:
+        - Code that repeatedly generates or modifies signatures to minimize the R value
+        - Loops or retries in signature generation aiming for a low R
+        - Comments or function names referencing 'low R', 'grinding', or 'compact signatures'
+        - Use of deterministic nonce generation with additional grinding logic
+        Only return:
+        1 - if low R grinding is clearly implemented
+        0 - if low R grinding is clearly not implemented
+        -1 - if it cannot be determined
+        """
+
+        self._add_to_chat_history(
+            "user", f"{task_prompt}\n\n" + "\n\n---\n\n".join(relevant_chunks))
+
+        response = self.llm.chat.completions.create(
+            model=OPEN_AI_MODEL,
+            messages=self.chat_history,
+            max_tokens=16
+        )
+        res = response.choices[0].message.content
+        print("OPEN AI RESPONSE low r grinding: ", res)
+
+        self._add_to_chat_history("assistant", res)
+
+        try:
+            self.responses["low_r_grinding"] = int(
+                res) if res in ["0", "1", "-1"] else -1
+        except ValueError:
+            self.responses["low_r_grinding"] = -1
+
+    def change_adress_same_as_input(self):
+        queries = [
+            "change creation",
+            "change address generation",
+        ]
+        relevant_chunks = []
+        for query in queries:
+            results = self.vector_db.query(query)
+            relevant_chunks.extend([r.payload['function_str']
+                                   for r in results])
+        relevant_chunks = list(set(relevant_chunks))
+
+        task_prompt = """
+        Analyze the following code to determine if it allows for change address to be the same as the input scriptpubkey.
+        Look for:
+        - Code that allows for change address to be the same as the input scriptpubkey
+        - Comments or function names referencing 'change', 'change address', or 'change output'
+        Only return:
+        1 - if change address to be the same as the input scriptpubkey is clearly allowed
+        0 - if change address to be the same as the input scriptpubkey is clearly not allowed
+        -1 - if it cannot be determined
+        """
+
+        self._add_to_chat_history(
+            "user", f"{task_prompt}\n\n" + "\n\n---\n\n".join(relevant_chunks))
+
+        response = self.llm.chat.completions.create(
+            model=OPEN_AI_MODEL,
+            messages=self.chat_history,
+            max_tokens=16
+        )
+        res = response.choices[0].message.content
+        print("OPEN AI RESPONSE change address same as input: ", res)
+
+        self._add_to_chat_history("assistant", res)
+
+        try:
+            self.responses["change_address_same_as_input"] = int(
+                res) if res in ["0", "1", "-1"] else -1
+        except ValueError:
+            self.responses["change_address_same_as_input"] = -1
+
+    def address_reuse(self):
+        queries = [
+            "address reuse",
+            "receive address",
+        ]
+        relevant_chunks = []
+        for query in queries:
+            results = self.vector_db.query(query)
+            relevant_chunks.extend([r.payload['function_str']
+                                   for r in results])
+        relevant_chunks = list(set(relevant_chunks))
+
+        task_prompt = """
+        Analyze the following code to determine if it allows for address reuse.
+        Look for:
+        - Code that allows for address reuse
+        - Comments or function names referencing 'address reuse', 'receive address', or 'send address'
+        Only return:
+        1 - if address reuse is clearly allowed
+        0 - if address reuse is clearly not allowed
+        -1 - if it cannot be determined
+        """
+
+        self._add_to_chat_history(
+            "user", f"{task_prompt}\n\n" + "\n\n---\n\n".join(relevant_chunks))
+
+        response = self.llm.chat.completions.create(
+            model=OPEN_AI_MODEL,
+            messages=self.chat_history,
+            max_tokens=16
+        )
+        res = response.choices[0].message.content
+        print("OPEN AI RESPONSE address reuse: ", res)
+
+    def use_of_nlocktime(self):
+        queries = [
+            "nlocktime",
+            "locktime",
+            "transaction locktime",
+        ]
+
+        relevant_chunks = []
+        for query in queries:
+            results = self.vector_db.query(query)
+            relevant_chunks.extend([r.payload['function_str']
+                                   for r in results])
+        relevant_chunks = list(set(relevant_chunks))
+
+        task_prompt = """
+        Analyze the following code to determine if it allows for the use of nlocktime.
+        Look for:
+        - Code that allows for the use of nlocktime
+        - Comments or function names referencing 'nlocktime', 'locktime', or 'transaction locktime'
+        Only return:
+        1 - if the use of nlocktime is clearly allowed
+        0 - if the use of nlocktime is clearly not allowed
+        -1 - if it cannot be determined
+        """
+
+        self._add_to_chat_history(
+            "user", f"{task_prompt}\n\n" + "\n\n---\n\n".join(relevant_chunks))
+
+    def nsequence_value(self):
+        queries = [
+            "nsequence value",
+            "sequence number",
+            "transaction sequence number",
+            "RBF",
+            "Replace-by-Fee",
+        ]
+
+        relevant_chunks = []
+        for query in queries:
+            results = self.vector_db.query(query)
+            relevant_chunks.extend([r.payload['function_str']
+                                   for r in results])
+        relevant_chunks = list(set(relevant_chunks))
+
+        task_prompt = """
+        Analyze the following code to determine if it allows for the use of nsequence.
+        Look for:
+        - Code that allows for the use of nsequence
+        - Comments or function names referencing 'nsequence', 'sequence number', or 'transaction sequence number'
+        Only return:
+        nsequence value as a hex string, or -1 if it cannot be determined
+        """
+
+        self._add_to_chat_history(
+            "user", f"{task_prompt}\n\n" + "\n\n---\n\n".join(relevant_chunks))
+
+        response = self.llm.chat.completions.create(
+            model=OPEN_AI_MODEL,
+            messages=self.chat_history,
+            max_tokens=16
+        )
+        res = response.choices[0].message.content
+        print("OPEN AI RESPONSE nsequence value: ", res)
+
+        self._add_to_chat_history("assistant", res)
+
+        self.responses["nsequence_value"] = res
+
     def _add_to_chat_history(self, role: str, content: str):
         self.chat_history.append({"role": role, "content": content})
 
@@ -357,16 +549,16 @@ class ResponseCollector:
 def main():
     args = sys.argv[1:]
     if len(args) < 1:
-        print("Usage: python main.py <file> <vector_db_path> <fingerprint_db_path>")
+        print("Usage: python main.py <file> <vector_db_uri> <fingerprint_db_path>")
         sys.exit(1)
     dir_to_read = args[0]
-    vector_db_path = args[1] 
+    vector_db_uri = args[1]
     fingerprint_db_path = args[2]
     # Initialize the openai client
     openai_client = openai.OpenAI()
 
     # Initialize the db
-    db = QuadrantClient(openai_client, vector_db_path)
+    db = QuadrantClient(openai_client, vector_db_uri)
     db.create_collections()
 
     # Read the manifest file
@@ -394,6 +586,10 @@ def main():
     response_collector.bip69_sorting()
     response_collector.mixed_input_types()
     response_collector.input_types()
+    response_collector.low_r_grinding()
+    response_collector.address_reuse()
+    response_collector.use_of_nlocktime()
+    response_collector.nsequence_value()
 
     print(response_collector.responses)
 
