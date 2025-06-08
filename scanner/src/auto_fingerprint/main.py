@@ -20,6 +20,8 @@ import lmdb
 PY_LANGUAGE = Language(tspython.language())
 VECTOR_DIMENSION = 1536
 OPEN_AI_MODEL = "gpt-4o-mini"
+EMBEDDING_MODEL = "text-embedding-3-small"
+MAX_TOKENS = 16
 
 
 class SourceCodeParser:
@@ -79,7 +81,7 @@ def derive_id(function_str: str) -> str:
 def get_embedding(client: openai.OpenAI, text: str):
     response = client.embeddings.create(
         input=text,
-        model="text-embedding-3-small"  # or text-embedding-3-large
+        model=EMBEDDING_MODEL
     )
     return np.array(response.data[0].embedding, dtype=np.float32)
 
@@ -198,7 +200,7 @@ class ResponseCollector:
         response = self.llm.chat.completions.create(
             model=OPEN_AI_MODEL,
             messages=self.chat_history,
-            max_tokens=16
+            max_tokens=MAX_TOKENS
         )
         res = response.choices[0].message.content
         print("OPEN AI RESPONSE tx version: ", res)
@@ -249,7 +251,7 @@ class ResponseCollector:
         response = self.llm.chat.completions.create(
             model=OPEN_AI_MODEL,
             messages=self.chat_history,
-            max_tokens=16
+            max_tokens=MAX_TOKENS
         )
         res = response.choices[0].message.content
         print("OPEN AI RESPONSE bip69 sorting: ", res)
@@ -297,7 +299,7 @@ class ResponseCollector:
         response = self.llm.chat.completions.create(
             model=OPEN_AI_MODEL,
             messages=self.chat_history,
-            max_tokens=16
+            max_tokens=MAX_TOKENS
         )
         res = response.choices[0].message.content
         print("OPEN AI RESPONSE mixed input types: ", res)
@@ -385,7 +387,7 @@ class ResponseCollector:
         response = self.llm.chat.completions.create(
             model=OPEN_AI_MODEL,
             messages=self.chat_history,
-            max_tokens=16
+            max_tokens=MAX_TOKENS
         )
         res = response.choices[0].message.content
         print("OPEN AI RESPONSE low r grinding: ", res)
@@ -427,7 +429,7 @@ class ResponseCollector:
         response = self.llm.chat.completions.create(
             model=OPEN_AI_MODEL,
             messages=self.chat_history,
-            max_tokens=16
+            max_tokens=MAX_TOKENS
         )
         res = response.choices[0].message.content
         print("OPEN AI RESPONSE change address same as input: ", res)
@@ -469,7 +471,7 @@ class ResponseCollector:
         response = self.llm.chat.completions.create(
             model=OPEN_AI_MODEL,
             messages=self.chat_history,
-            max_tokens=16
+            max_tokens=MAX_TOKENS
         )
         res = response.choices[0].message.content
         print("OPEN AI RESPONSE address reuse: ", res)
@@ -533,7 +535,7 @@ class ResponseCollector:
         response = self.llm.chat.completions.create(
             model=OPEN_AI_MODEL,
             messages=self.chat_history,
-            max_tokens=16
+            max_tokens=MAX_TOKENS
         )
         res = response.choices[0].message.content
         print("OPEN AI RESPONSE nsequence value: ", res)
