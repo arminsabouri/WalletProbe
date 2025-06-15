@@ -19,6 +19,7 @@ from auto_fingerprint.vector_db import QuadrantClient
 PY_LANGUAGE = Language(tspython.language())
 JAVA_LANGUAGE = Language(tsjava.language())
 
+
 class SourceCodeParser:
     def __init__(self, base_dir: str, manifest: dict):
         self.base_dir = base_dir
@@ -70,6 +71,7 @@ class SourceCodeParser:
 
         return functions
 
+
 def main():
     args = sys.argv[1:]
     if len(args) < 1:
@@ -81,10 +83,6 @@ def main():
     # Initialize the openai client
     openai_client = openai.OpenAI()
 
-    # Initialize the db
-    db = QuadrantClient(openai_client, vector_db_uri)
-    db.create_collections()
-
     # Read the manifest file
     manifest = None
     try:
@@ -92,6 +90,11 @@ def main():
             manifest = json.load(f)
     except FileNotFoundError:
         raise ValueError(f"Manifest file not found in {dir_to_read}")
+
+    wallet_tag = f"{manifest['name']}:{manifest['version']}"
+    # Initialize the db
+    db = QuadrantClient(openai_client, vector_db_uri, wallet_tag)
+    db.create_collections()
 
     # Initialize the source code parser
     source_code_parser = SourceCodeParser(dir_to_read, manifest)

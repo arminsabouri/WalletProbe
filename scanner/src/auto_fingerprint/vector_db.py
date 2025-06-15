@@ -22,10 +22,9 @@ def get_embedding(client: openai.OpenAI, text: str):
 
 
 class QuadrantClient:
-    collection_name = "electrum_code_chunks"
-
-    def __init__(self, client: openai.OpenAI, vector_db_uri: str):
+    def __init__(self, client: openai.OpenAI, vector_db_uri: str, collection_name: str):
         self.client = client
+        self.collection_name = collection_name
         self.qdrant_client = QdrantClient(
             url=vector_db_uri)
 
