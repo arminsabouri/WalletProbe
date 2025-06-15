@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Wallet Semantic Search</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+</head>
+<body class="bg-black text-white font-mono">
+  <div class="max-w-3xl mx-auto p-6 space-y-10">
+    <header class="text-center">
+      <h1 class="text-4xl md:text-6xl font-bold text-pink-500">Wallet Semantic Search</h1>
+      <p class="mt-4 text-xl text-gray-300">A semantic search engine for Bitcoin wallets</p>
+    </header>
+    <section>
+      <h2 class="text-2xl font-bold text-green-400">🧠 The Vibe</h2>
+      <p class="mt-2 text-gray-300">
+        <div class="card" id="wrapper">
+        <h1>🚀 Submit Something</h1>
+            <div class="mb-4">
+                <input type="text" class="form-control" name="user_input" placeholder="Type here..." required>
+            </div>
+            <div class="d-grid">
+                <button 
+                    hx-post="{{ url_for('submit') }}" 
+                    hx-trigger="click" 
+                    hx-target="#wrapper" 
+                    hx-swap="outerHTML"
+                    hx-include="[name='user_input']"
+                >
+                    Click Me!
+                </button>
+            </div>
+    </div>
+      </p>
+    </section>
+
+     <section>
+      <h2 class="text-2xl font-bold text-pink-400">🎁 The Bounty</h2>
+      <p class="text-gray-300 mt-2">
+        <strong>$6,500 USD</strong> (paid in BTC) for the best entry, judged by our legendary committee.
+      </p>
+    </section>
+     
+      <div class="mt-4">
+        <h2 class="font-bold text-lg text-yellow-200 mb-1">🔀 The Flow</h2>
+        <ul class="list-disc ml-6 text-gray-300 space-y-2">
+        <li>Meme/chaotic onboarding (no email required)</li>
+        <li>Create / restore wallet </li>
+        <li>View wallet balance and recent transactions</li>
+        <li>Send Bitcoin UI </li>
+        <li>Receive Bitcoin via QR</li>
+        <li>Basic backup/restore</li>
+        <li>Can be on-chain, lightning, USDT, as long as it's non custodial!</li>
+        </ol>
+        <p class="mt-2 text-gray-400 text-sm">
+          Bonus points for weirdness, creativity, or extra features!
+        </p>
+      </div>
+    </section>
+
+    <section class="bg-purple-900 bg-opacity-70 rounded-xl text-white text-left p-6 space-y-4 shadow-lg">
+      <h2 class="text-2xl font-bold mb-2">🫨 Join the Chaos</h2>
+      <p>
+        Have questions, want to find a partner, or just want to network and hang out? Join our <a href="https://t.me/+pmWQGSUlXRE0Y2I0" target="_blank" class="underline text-green-300 font-bold">Telegram group</a> to team up, get feedback, and build in public. Introduce yourself. Everyone’s welcome.
+      </p>
+    </section>
+
+<section class="bg-pink-900 bg-opacity-80 rounded-xl text-white text-left p-6 space-y-4 shadow-lg">
+  <h2 class="text-2xl font-bold text-purple-300 mb-2">📅 Timeline & Submission</h2>
+  <ul class="list-disc ml-6 text-gray-200 space-y-2 text-left inline-block text-lg">
+    <li><strong>Deadline:</strong> June 16th</li>
+    <li>Project must be open source if selected as a winner</li>
+  </ul>
+  <p class="mt-2 text-gray-300">
+    When you're ready, submit your entry using the button below.
+  </p>
+  <a href="https://docs.google.com/forms/d/e/1FAIpQLSeqnNOOdLV0sMpBDrSyrjvc6OyTw9rxYV-piuaXkH4wi5L37Q/viewform?usp=header"
+     target="_blank"
+     class="inline-block bg-green-400 text-black font-bold py-2 px-6 rounded-xl hover:bg-green-300 transition-all text-lg shadow-md mt-2">
+    Submit Your Entry
+  </a>
+  <p class="text-gray-400 text-sm mt-2">
+    All submissions must be in by June 16th. Good luck!
+  </p>
+</section>
+<section>
+  <h2 class="text-2xl font-bold text-teal-400">🧑‍⚖️ Judging Committee</h2>
+  <p class="text-gray-300 mt-2">
+    <a href="https://twitter.com/matbalez" class="underline text-teal-300">@matbalez</a>, 
+    <a href="https://twitter.com/dickerson_des" class="underline text-teal-300">@dickerson_des</a>, 
+    <a href="https://x.com/RajarshiMaitra" class="underline text-teal-300">@RajarshiMaitra</a>, 
+    <a href="https://x.com/NikolaSologub" class="underline text-teal-300">@NikolaSologub</a>, and 
+    <a href="https://twitter.com/Satoshaii" class="underline text-teal-300">@Satoshaii</a>
+  </p>
+</section>
+
+    <section>
+      <h2 class="text-2xl font-bold text-red-400">🤖 Who This Is For</h2>
+      <ul class="list-disc ml-6 text-gray-300 space-y-2">
+        <li>You are a cultured enjoyed of brainrot content</li>
+        <li>You hate boring Fintech Apps</li>
+        <li>You think memes > menus</li>
+        <li>You know what Skibidi means</li>
+        <li>You know who 🦈 Tralalero Tralala 🐊 Bombardiro Crocodilo Ballerina Cappuccina ☕️ are</li>
+      </ul>
+  </section>    
+
+    <section>
+      <h2 class="text-2xl font-bold text-indigo-400">🔗 Resources</h2>
+      <ul class="list-disc ml-6 text-gray-300 space-y-2">
+        <li><a href="https://bitcoindevkit.org" class="underline text-indigo-300">BDK – Bitcoin Dev Kit</a></li>
+        <li><a href="https://lightningdevkit.org/" class="underline text-indigo-300">LDK – Lightning Dev Kit</a></li>
+        <li><a href="https://sdk-doc-liquid.breez.technology" class="underline text-indigo-300">Breez SDK</a></li>
+        <li><a href="https://docs.wallet.tether.io" class="underline text-indigo-300">USDT Wallet SDK</a></li>
+        <li><a href="https://ugly.cash" class="underline text-indigo-300">UglyCash Inspiration</a></li>
+        <li><a href="https://x.com/pavlenex/status/1929568792775966834?s=46" class="underline text-indigo-300">Twitter Space Community Call with Judges</a></li>
+        <li><a href="https://t.me/+pmWQGSUlXRE0Y2I0" class="underline text-indigo-300">Telegram group to brainroot together</a></li>
+
+      </ul>
+    </section>
+
+    <footer class="text-center text-sm text-gray-500 border-t border-gray-700 pt-4">
+      &copy; 2025 Skibidi Wallet Bounty. All rights reserved.
+    </footer>
+
+  </div>
+</body>
+</html>
