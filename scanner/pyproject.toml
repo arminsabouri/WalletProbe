@@ -12,6 +12,7 @@ dependencies = [
     "lmdb (>=1.6.2,<2.0.0)",
     "numpy (>=2.3.0,<3.0.0)",
     "qdrant-client (>=1.14.2,<2.0.0)",
+    "tree-sitter-java (>=0.23.5,<0.24.0)",
 ]
 
 [tool.poetry]

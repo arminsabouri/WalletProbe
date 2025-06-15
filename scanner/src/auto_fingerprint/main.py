@@ -3,6 +3,7 @@
 import openai
 import numpy as np
 import tree_sitter_python as tspython
+import tree_sitter_java as tsjava
 from tree_sitter import Language, Parser, Tree, Node
 from pathlib import Path
 from typing import Generator
@@ -18,6 +19,8 @@ import lmdb
 
 
 PY_LANGUAGE = Language(tspython.language())
+JAVA_LANGUAGE = Language(tsjava.language())
+
 VECTOR_DIMENSION = 1536
 OPEN_AI_MODEL = "gpt-4o-mini"
 EMBEDDING_MODEL = "text-embedding-3-small"
@@ -30,6 +33,8 @@ class SourceCodeParser:
         self.source_core_file_suffix = manifest["source_core_file_suffix"]
         if manifest["language"] == "python":
             self.parser = self.__python_parser()
+        elif manifest["language"] == "java":
+            self.parser = self.__java_parser()
         else:
             raise ValueError(f"Unsupported language: {manifest['language']}")
 
@@ -42,6 +47,10 @@ class SourceCodeParser:
     def __python_parser(self) -> Parser:
 
         parser = Parser(PY_LANGUAGE)
+        return parser
+
+    def __java_parser(self) -> Parser:
+        parser = Parser(JAVA_LANGUAGE)
         return parser
 
     def __traverse_tree(self, tree: Tree) -> Generator[Node, None, None]:
@@ -63,7 +72,7 @@ class SourceCodeParser:
 
         # Filter for function definitions and map them to their code snippets
         function_nodes = filter(
-            lambda node: node.type == "function_definition", self.__traverse_tree(tree))
+            lambda node: node.type == "function_definition" or node.type == "method_declaration", self.__traverse_tree(tree))
         functions = list(
             map(lambda node: code[node.start_byte:node.end_byte], function_nodes))
 
