@@ -32,14 +32,15 @@ class ResponseCollector:
                                    for r in results])
         relevant_chunks = list(set(relevant_chunks))
 
-        system_prompt = """
-        You are a code analysis assistant. Your task is to identify the transaction version 
-        number used in Bitcoin-related code. Look for:
-        - Version numbers in transaction creation
-        - Default version values
-        - Version constants or definitions
-        Only return a single number, or -1 if the version cannot be determined.
-        """
+        # TODO: add system prompt
+        # system_prompt = """
+        # You are a code analysis assistant. Your task is to identify the transaction version 
+        # number used in Bitcoin-related code. Look for:
+        # - Version numbers in transaction creation
+        # - Default version values
+        # - Version constants or definitions
+        # Only return a single number, or -1 if the version cannot be determined.
+        # """
 
         user_prompt = "What transaction version number is used in the following code? Only return a number or -1 if unclear.\n\n"
         user_prompt += "\n\n---\n\n".join(relevant_chunks)
@@ -49,7 +50,7 @@ class ResponseCollector:
         response = self.llm.chat.completions.create(
             model=OPEN_AI_MODEL,
             messages=self.chat_history,
-            max_tokens=MAX_TOKENS
+            max_tokens=MAX_TOKENS,
         )
         res = response.choices[0].message.content
         print("OPEN AI RESPONSE tx version: ", res)
@@ -79,18 +80,19 @@ class ResponseCollector:
         # Deduplicate chunks
         relevant_chunks = list(set(relevant_chunks))
 
-        system_prompt = """
-        You are a code analysis assistant. Your task is to determine if the code implements 
-        BIP69 sorting for Bitcoin transactions. Look for:
-        - Lexicographical sorting of inputs/outputs
-        - References to BIP69 in comments or function names
-        - Sorting of transaction inputs by (txid, vout)
-        - Sorting of outputs by (amount, scriptPubKey)
-        Only return:
-        1 - if BIP69 sorting is clearly implemented
-        0 - if BIP69 sorting is clearly not implemented
-        -1 - if it cannot be determined
-        """
+        # TODO: add system prompt
+        # system_prompt = """
+        # You are a code analysis assistant. Your task is to determine if the code implements 
+        # BIP69 sorting for Bitcoin transactions. Look for:
+        # - Lexicographical sorting of inputs/outputs
+        # - References to BIP69 in comments or function names
+        # - Sorting of transaction inputs by (txid, vout)
+        # - Sorting of outputs by (amount, scriptPubKey)
+        # Only return:
+        # 1 - if BIP69 sorting is clearly implemented
+        # 0 - if BIP69 sorting is clearly not implemented
+        # -1 - if it cannot be determined
+        # """
 
         user_prompt = "Does the following code implement BIP69 sorting? Only return 1, 0, or -1 if unclear.\n\n"
         user_prompt += "\n\n---\n\n".join(relevant_chunks)
@@ -100,7 +102,7 @@ class ResponseCollector:
         response = self.llm.chat.completions.create(
             model=OPEN_AI_MODEL,
             messages=self.chat_history,
-            max_tokens=MAX_TOKENS
+            max_tokens=MAX_TOKENS,
         )
         res = response.choices[0].message.content
         print("OPEN AI RESPONSE bip69 sorting: ", res)
@@ -395,4 +397,3 @@ class ResponseCollector:
 
     def _add_to_chat_history(self, role: str, content: str):
         self.chat_history.append({"role": role, "content": content})
-

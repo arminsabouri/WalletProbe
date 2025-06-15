@@ -91,7 +91,7 @@ def main():
     except FileNotFoundError:
         raise ValueError(f"Manifest file not found in {dir_to_read}")
 
-    wallet_tag = f"{manifest['name']}:{manifest['version']}"
+    wallet_tag = f"{manifest['name']}-{manifest['version']}"
     # Initialize the db
     db = QuadrantClient(openai_client, vector_db_uri, wallet_tag)
     db.create_collections()
