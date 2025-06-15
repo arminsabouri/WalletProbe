@@ -4,14 +4,35 @@ from qdrant_client import QdrantClient
 
 app = Flask(__name__)
 
+class VectorDBFactory:
+    def __init__(self, vector_db_uri):
+        self.vector_db_uri = vector_db_uri
+
+    def db(self):
+        return QdrantClient(url=self.vector_db_uri, prefer_grpc=False)
+
 @app.route("/", methods=["GET"])
 def index():
-    return render_template("index.html")
+    # wallets = wallets()
+    wallet_tags = app.db_factory.db().get_collections()
+    wallets = [col.name for col in wallet_tags.collections]
+
+
+    print(wallets)
+    return render_template("index.html", wallets=wallets)
 
 @app.route("/submit", methods=["POST"])
 def submit():
     user_input = request.form.get("user_input")
     return f"You submitted: {user_input}"
+
+# Get list of wallets which we have embeddings for
+# @app.route("/wallets", methods=["GET"])
+def wallets():
+    wallet_tags = app.db_factory.db().get_collections()
+    collection_names = [col.name for col in wallet_tags.collections]
+
+    return collection_names
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Wallet fingerprinting server.")
@@ -23,8 +44,8 @@ def parse_args():
 def main():
     args = parse_args()
     app.config["VECTOR_DB"] = args.vector_db
-    qdrant_client = QdrantClient(url=app.config["VECTOR_DB"], prefer_grpc=False)
-    app.qdrant_client = qdrant_client
+    db_factory = VectorDBFactory(app.config["VECTOR_DB"])
+    app.db_factory = db_factory
 
     app.run(debug=True, port=args.port)
 
