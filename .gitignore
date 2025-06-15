@@ -32,3 +32,5 @@ dist/
 
 # LMDB db files
 *.lmdb/
+
+test_source_code/
