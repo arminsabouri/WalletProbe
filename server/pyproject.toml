@@ -9,7 +9,9 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "flask (>=3.1.1,<4.0.0)",
-    "qdrant-client (>=1.14.2,<2.0.0)"
+    "qdrant-client (>=1.14.2,<2.0.0)",
+    "openai (==1.82.1)",
+    "numpy (>=2.3.0,<3.0.0)"
 ]
 
 [tool.poetry]
