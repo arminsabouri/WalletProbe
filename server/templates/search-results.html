@@ -3,7 +3,13 @@
         {% for result in results %}
         <li>
             <h2 class="text-white font-mono text-2xl mb-2">{{ result.file_name }}</h2>
-            <p class="text-white font-mono code text-lg mb-2">{{ result.function_str }}</p>
+            <p class="font-mono code text-lg mb-2">
+                <pre>
+                    <code class="language-python">
+                        {{ result.function_str }}
+                    </code>
+                </pre>
+            </p>
         </li>
         {% endfor %}
     </ul>

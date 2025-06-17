@@ -38,7 +38,7 @@ def submit():
     res = vector_db.search(
         collection_name=wallet,
         query_vector=user_input_embedding,
-        limit=2
+        limit=10
     )
 
     print(res)

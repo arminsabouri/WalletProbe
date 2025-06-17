@@ -7,7 +7,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Wallet Semantic Search</title>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.15.6/styles/default.min.css">
+
   <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
 </head>
 
 <body class="bg-black text-white font-mono">
@@ -48,11 +51,8 @@
         <div class="p-2">
           <button
             class="bg-green-900 hover:bg-green-800 text-white font-bold py-2 px-4 rounded transition-colors duration-200"
-            hx-post="{{ url_for('submit') }}"
-            hx-trigger="click"
-            hx-target="#search-results"
-            hx-swap="outerHTML"
-            hx-include="[name='user_input'], [name='selected_wallet']">
+            hx-post="{{ url_for('submit') }}" hx-trigger="click" hx-target="#search-results" hx-swap="outerHTML"
+            hx-include="[name='user_input'], [name='selected_wallet']" hx-on:htmx:after-swap="highlightCode()">
             Search
           </button>
         </div>
@@ -67,8 +67,22 @@
     <footer class="text-center text-sm text-gray-500 border-t border-gray-700 pt-4">
       &copy; 2025 Wallet Semantic Search. All rights reserved.
     </footer>
-
   </div>
 </body>
+
+<script defer>
+  function highlightCode() {
+    console.log('highlightCode');
+    const codeBlocks = document.querySelectorAll('pre code');
+    codeBlocks.forEach(block => {
+      console.log(block);
+      hljs.highlightElement(block);
+    });
+  }
+
+  window.document.body.addEventListener('htmx:afterSwap', function (event) {
+    highlightCode();
+  });
+</script>
 
 </html>
