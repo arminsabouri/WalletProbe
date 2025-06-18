@@ -120,10 +120,8 @@ def main():
 
     print(response_collector.responses)
 
-    # Save the results to the lmdb database
-    env = lmdb.open(fingerprint_db_path, map_size=10**9)  # 1 GB
-    response_collector.save_results(env, manifest["name"], manifest["version"])
-
+    # Save results to the vector db
+    db.append_collection_metadata(response_collector.responses)
 
 if __name__ == "__main__":
     main()

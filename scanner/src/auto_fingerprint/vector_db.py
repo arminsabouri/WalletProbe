@@ -2,12 +2,16 @@ import hashlib
 import openai
 import numpy as np
 from qdrant_client import QdrantClient
-from qdrant_client.models import VectorParams, Distance, PointStruct
+from qdrant_client.models import VectorParams, Distance, PointStruct, Filter, FieldCondition, MatchValue
 
 from auto_fingerprint.consts import VECTOR_DIMENSION, EMBEDDING_MODEL
 
+METADATA_POINT = [0] * VECTOR_DIMENSION
+
 # For bad reasons, qdrant doesnt support hex strings as ids. only UUIDs
 # So lets convert the sha256 hash to a UUID
+
+
 def derive_id(function_str: str) -> str:
     sha2 = hashlib.sha256(function_str.encode('utf-8')).hexdigest()[32:]
     return sha2[0:8] + "-" + sha2[8:12] + "-" + sha2[12:16] + "-" + sha2[16:20] + "-" + sha2[20:]
@@ -34,6 +38,17 @@ class QuadrantClient:
                 collection_name=self.collection_name,
                 vectors_config=VectorParams(
                     size=VECTOR_DIMENSION, distance=Distance.COSINE),
+            )
+        # Upload empty metadata point if it doesn't exist
+        if not self.point_exists(derive_id("metadata")):
+            metadata_point = PointStruct(
+                id=derive_id("metadata"),
+                vector=METADATA_POINT,
+                payload={}
+            )
+            self.qdrant_client.upsert(
+                collection_name=self.collection_name,
+                points=[metadata_point]
             )
 
     def point_exists(self, id: str) -> bool:
@@ -72,28 +87,29 @@ class QuadrantClient:
 
     def append_collection_metadata(self, metadata: dict) -> None:
         # get existing metadata
-        existing_metadata = self.qdrant_client.query(
-            collection_name=self.collection_name,
-            query_vector=[0] * VECTOR_DIMENSION,
-            limit=1
-        ).metadata
+        existing_metadata = self.get_collection_metadata()
+        print("existing metadata")
+        print(existing_metadata)
         # merge existing metadata with new metadata
         merged_metadata = {**existing_metadata, **metadata}
         metadata_point = PointStruct(
             id=derive_id("metadata"),
-            vector = [0] * VECTOR_DIMENSION,
-            payload = merged_metadata
+            vector=METADATA_POINT,
+            payload=merged_metadata
         )
         self.qdrant_client.upsert(
             collection_name=self.collection_name,
-            points = [metadata_point]
+            points=[metadata_point]
         )
 
     def get_collection_metadata(self) -> dict:
-        return self.qdrant_client.query(
+        res = self.qdrant_client.retrieve(
             collection_name=self.collection_name,
-            query_vector=[0] * VECTOR_DIMENSION,
-            limit=1
-        ).metadata
-
+            ids=[derive_id("metadata")],
+            with_payload=True,
+            with_vectors=False
+        )
+        if len(res) == 0:
+            raise ValueError("Metadata point not found")
+        return res[0].payload
 
