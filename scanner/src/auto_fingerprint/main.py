@@ -10,7 +10,6 @@ from typing import Generator
 import sys
 import json
 import os
-import lmdb
 
 from auto_fingerprint.utils import create_embeddings_index
 from auto_fingerprint.response import ResponseCollector
@@ -75,11 +74,10 @@ class SourceCodeParser:
 def main():
     args = sys.argv[1:]
     if len(args) < 1:
-        print("Usage: python main.py <file> <vector_db_uri> <fingerprint_db_path>")
+        print("Usage: python main.py <file> <vector_db_uri>")
         sys.exit(1)
     dir_to_read = args[0]
     vector_db_uri = args[1]
-    fingerprint_db_path = args[2]
     # Initialize the openai client
     openai_client = openai.OpenAI()
 
