@@ -70,3 +70,30 @@ class QuadrantClient:
         )
         return res
 
+    def append_collection_metadata(self, metadata: dict) -> None:
+        # get existing metadata
+        existing_metadata = self.qdrant_client.query(
+            collection_name=self.collection_name,
+            query_vector=[0] * VECTOR_DIMENSION,
+            limit=1
+        ).metadata
+        # merge existing metadata with new metadata
+        merged_metadata = {**existing_metadata, **metadata}
+        metadata_point = PointStruct(
+            id=derive_id("metadata"),
+            vector = [0] * VECTOR_DIMENSION,
+            payload = merged_metadata
+        )
+        self.qdrant_client.upsert(
+            collection_name=self.collection_name,
+            points = [metadata_point]
+        )
+
+    def get_collection_metadata(self) -> dict:
+        return self.qdrant_client.query(
+            collection_name=self.collection_name,
+            query_vector=[0] * VECTOR_DIMENSION,
+            limit=1
+        ).metadata
+
+
