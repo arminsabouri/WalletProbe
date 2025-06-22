@@ -4,6 +4,7 @@ import openai
 import numpy as np
 import tree_sitter_python as tspython
 import tree_sitter_java as tsjava
+import tree_sitter_cpp as tscpp
 from tree_sitter import Language, Parser, Tree, Node
 from pathlib import Path
 from typing import Generator
@@ -17,7 +18,7 @@ from auto_fingerprint.vector_db import QuadrantClient
 
 PY_LANGUAGE = Language(tspython.language())
 JAVA_LANGUAGE = Language(tsjava.language())
-
+CPP_LANGUAGE = Language(tscpp.language())
 
 class SourceCodeParser:
     def __init__(self, base_dir: str, manifest: dict):
@@ -27,6 +28,8 @@ class SourceCodeParser:
             self.parser = self.__python_parser()
         elif manifest["language"] == "java":
             self.parser = self.__java_parser()
+        elif manifest["language"] == "cpp":
+            self.parser = self.__cpp_parser()
         else:
             raise ValueError(f"Unsupported language: {manifest['language']}")
 
@@ -43,6 +46,10 @@ class SourceCodeParser:
 
     def __java_parser(self) -> Parser:
         parser = Parser(JAVA_LANGUAGE)
+        return parser
+
+    def __cpp_parser(self) -> Parser:
+        parser = Parser(CPP_LANGUAGE)
         return parser
 
     def __traverse_tree(self, tree: Tree) -> Generator[Node, None, None]:
@@ -90,6 +97,7 @@ def main():
         raise ValueError(f"Manifest file not found in {dir_to_read}")
 
     wallet_tag = f"{manifest['name']}-{manifest['version']}"
+    print("Wallet tag: ", wallet_tag)
     # Initialize the db
     db = QuadrantClient(openai_client, vector_db_uri, wallet_tag)
     db.create_collections()
