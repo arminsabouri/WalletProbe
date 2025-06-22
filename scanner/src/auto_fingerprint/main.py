@@ -8,9 +8,10 @@ import tree_sitter_cpp as tscpp
 from tree_sitter import Language, Parser, Tree, Node
 from pathlib import Path
 from typing import Generator
-import sys
 import json
 import os
+import argparse
+import sys
 
 from auto_fingerprint.utils import create_embeddings_index
 from auto_fingerprint.response import ResponseCollector
@@ -79,12 +80,13 @@ class SourceCodeParser:
 
 
 def main():
-    args = sys.argv[1:]
-    if len(args) < 1:
-        print("Usage: python main.py <file> <vector_db_uri>")
-        sys.exit(1)
-    dir_to_read = args[0]
-    vector_db_uri = args[1]
+    parser = argparse.ArgumentParser(description="Process source code and vector DB URI.")
+    parser.add_argument("file", help="Directory containing the source code and manifest.json")
+    parser.add_argument("vector_db_uri", help="URI for the vector database")
+    args = parser.parse_args()
+
+    dir_to_read = args.file
+    vector_db_uri = args.vector_db_uri
     # Initialize the openai client
     openai_client = openai.OpenAI()
 
