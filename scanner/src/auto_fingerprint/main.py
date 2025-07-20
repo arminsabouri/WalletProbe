@@ -65,6 +65,7 @@ def main():
         response_collector.address_reuse()
         response_collector.use_of_nlocktime()
         response_collector.nsequence_value()
+        response_collector.change_id_location()
 
         print(response_collector.responses)
 

@@ -395,5 +395,55 @@ class ResponseCollector:
 
         self.responses["nsequence_value"] = res
 
+    def change_id_location(self):
+        queries = [
+            "change output location",
+            "change address position",
+            "change output index",
+            "change output placement",
+            "change address generation position"
+        ]
+        relevant_chunks = []
+        for query in queries:
+            results = self.vector_db.query(query)
+            relevant_chunks.extend([r.payload['function_str']
+                                   for r in results])
+        relevant_chunks = list(set(relevant_chunks))
+
+        task_prompt = """
+        Analyze the following code to determine where the change output is positioned in Bitcoin transactions.
+        Look for:
+        - Code that determines the position/index of the change output
+        - Logic for placing change output at the end vs. beginning of outputs
+        - Comments or function names referencing 'change position', 'change index', or 'change location'
+        - Default behavior for change output placement
+        Only return:
+        0 - if change output is placed at the beginning (index 0)
+        1 - if change output is placed at the end (last index)
+        2 - if change output position is variable/dynamic
+        -1 - if it cannot be determined
+        """
+
+        self._add_to_chat_history(
+            "user", f"{task_prompt}\n\n" + "\n\n---\n\n".join(relevant_chunks))
+
+        response = self.llm.chat.completions.create(
+            model=OPEN_AI_MODEL,
+            messages=self.chat_history,
+            max_tokens=MAX_TOKENS
+        )
+        res = response.choices[0].message.content
+        print("OPEN AI RESPONSE change id location: ", res)
+
+        self._add_to_chat_history("assistant", res)
+
+        try:
+            self.responses["change_id_location"] = int(
+                res) if res in ["0", "1", "2", "-1"] else -1
+        except ValueError:
+            self.responses["change_id_location"] = -1
+
+    
+
     def _add_to_chat_history(self, role: str, content: str):
         self.chat_history.append({"role": role, "content": content})
