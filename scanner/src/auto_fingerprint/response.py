@@ -1,6 +1,3 @@
-
-import json
-import lmdb
 import openai
 from auto_fingerprint.vector_db import QuadrantClient
 from auto_fingerprint.consts import OPEN_AI_MODEL, MAX_TOKENS
@@ -12,12 +9,6 @@ class ResponseCollector:
         self.llm = llm
         self.responses = {}
         self.chat_history = []
-
-    def save_results(self, lmdb_env: lmdb.Environment, wallet_name: str, wallet_version: str):
-        key = f"{wallet_name}:{wallet_version}"
-        value = json.dumps(self.responses)
-        with lmdb_env.begin(write=True) as txn:
-            txn.put(key.encode('utf-8'), value.encode('utf-8'))
 
     def tx_version(self):
         queries = [
@@ -34,7 +25,7 @@ class ResponseCollector:
 
         # TODO: add system prompt
         # system_prompt = """
-        # You are a code analysis assistant. Your task is to identify the transaction version 
+        # You are a code analysis assistant. Your task is to identify the transaction version
         # number used in Bitcoin-related code. Look for:
         # - Version numbers in transaction creation
         # - Default version values
@@ -82,7 +73,7 @@ class ResponseCollector:
 
         # TODO: add system prompt
         # system_prompt = """
-        # You are a code analysis assistant. Your task is to determine if the code implements 
+        # You are a code analysis assistant. Your task is to determine if the code implements
         # BIP69 sorting for Bitcoin transactions. Look for:
         # - Lexicographical sorting of inputs/outputs
         # - References to BIP69 in comments or function names
@@ -442,8 +433,6 @@ class ResponseCollector:
                 res) if res in ["0", "1", "2", "-1"] else -1
         except ValueError:
             self.responses["change_id_location"] = -1
-
-    
 
     def _add_to_chat_history(self, role: str, content: str):
         self.chat_history.append({"role": role, "content": content})
