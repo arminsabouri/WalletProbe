@@ -66,6 +66,7 @@ def main():
         response_collector.use_of_nlocktime()
         response_collector.nsequence_value()
         response_collector.change_id_location()
+        response_collector.op_return_support()
 
         print(response_collector.responses)
 

@@ -434,5 +434,57 @@ class ResponseCollector:
         except ValueError:
             self.responses["change_id_location"] = -1
 
+    def op_return_support(self):
+        queries = [
+            "OP_RETURN output creation",
+            "opreturn transaction output",
+            "data embedding in transactions",
+            "null data output",
+            "OP_RETURN script creation",
+            "data carrier output"
+        ]
+        relevant_chunks = []
+        for query in queries:
+            results = self.vector_db.query(query)
+            relevant_chunks.extend([r.payload['function_str']
+                                   for r in results])
+        relevant_chunks = list(set(relevant_chunks))
+
+        # print chunks
+        print("Relevant chunks: ", relevant_chunks)
+
+        task_prompt = """
+        Analyze the following code to determine if it supports creating OP_RETURN outputs in Bitcoin transactions.
+        Look for:
+        - Code that creates OP_RETURN outputs or null data outputs
+        - Functions that embed data in transactions
+        - Script creation for data carrier outputs
+        - Comments or function names referencing 'OP_RETURN', 'data output', or 'null data'
+        - Transaction building logic that handles data outputs
+        Only return:
+        1 - if OP_RETURN outputs are clearly supported
+        0 - if OP_RETURN outputs are clearly not supported
+        -1 - if it cannot be determined
+        """
+
+        self._add_to_chat_history(
+            "user", f"{task_prompt}\n\n" + "\n\n---\n\n".join(relevant_chunks))
+
+        response = self.llm.chat.completions.create(
+            model=OPEN_AI_MODEL,
+            messages=self.chat_history,
+            max_tokens=MAX_TOKENS
+        )
+        res = response.choices[0].message.content
+        print("OPEN AI RESPONSE op_return_support: ", res)
+
+        self._add_to_chat_history("assistant", res)
+
+        try:
+            self.responses["op_return_support"] = int(
+                res) if res in ["0", "1", "-1"] else -1
+        except ValueError:
+            self.responses["op_return_support"] = -1
+
     def _add_to_chat_history(self, role: str, content: str):
         self.chat_history.append({"role": role, "content": content})
