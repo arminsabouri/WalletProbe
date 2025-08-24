@@ -10,6 +10,7 @@ PY_LANGUAGE = Language(tspython.language())
 JAVA_LANGUAGE = Language(tsjava.language())
 CPP_LANGUAGE = Language(tscpp.language())
 
+
 class SourceCodeParser:
     def __init__(self, base_dir: str, manifest: dict):
         self.base_dir = base_dir
