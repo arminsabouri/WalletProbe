@@ -112,4 +112,3 @@ class QuadrantClient:
         if len(res) == 0:
             raise ValueError("Metadata point not found")
         return res[0].payload
-

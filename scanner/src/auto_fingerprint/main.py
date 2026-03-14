@@ -68,6 +68,26 @@ def main():
         response_collector.change_id_location()
         response_collector.op_return_support()
 
+        # New independent
+        response_collector.output_types()
+        response_collector.number_of_outputs()
+        response_collector.compressed_public_keys()
+
+        # New probabilistic
+        response_collector.input_order_smallest_first()
+        response_collector.input_order_largest_first()
+        response_collector.input_order_oldest_first()
+        response_collector.round_fee_indicator()
+
+        # New dependent
+        response_collector.change_type_matches_output()
+        response_collector.change_type_matches_input()
+
+        # New temporal
+        response_collector.spend_unconfirmed()
+        response_collector.rbf_replacement()
+        response_collector.feerate_estimation_source()
+
         print(response_collector.responses)
 
         # Save results to the vector db

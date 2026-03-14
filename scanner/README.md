@@ -31,7 +31,7 @@ qdrant/qdrant
 poetry run python src/auto_fingerprint/main.py embed --dir_to_read test_source_code/electrum/ --vector_db_uri "localhost:6333"
 ```
 
-5. Create fingerprints
+1. Create fingerprints
 
 ```bash
 poetry run python src/auto_fingerprint/main.py fingerprint --dir_to_read test_source_code/electrum/ --vector_db_uri "localhost:6333"
@@ -39,15 +39,15 @@ poetry run python src/auto_fingerprint/main.py fingerprint --dir_to_read test_so
 
 ### TODO
 
-- Add support for more languages (rust, go, javascript)
+- Add support for more languages (rust, go, javascript, dart)
 - Seed LLM for consistent results
 - Explore fine tuning
 - Collect more heuristics:
-   * Supported output types
-   * Fee estimation source
-   * Output structure (can support multiple payments)
-   * Can RBF
-   * Can create OP_RETURN
-   * Can create cpfp packages
-   * How are inputs sorted?
-   * Can create ephemeral anchor outputs
+  - Supported output types
+  - Fee estimation source
+  - Output structure (can support multiple payments)
+  - Can RBF
+  - Can create OP_RETURN
+  - Can create cpfp packages
+  - How are inputs sorted?
+  - Can create ephemeral anchor outputs
