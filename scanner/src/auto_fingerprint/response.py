@@ -8,7 +8,6 @@ class ResponseCollector:
         self.vector_db = vector_db
         self.llm = llm
         self.responses = {}
-        self.chat_history = []
 
     def _query_chunks(self, queries):
         """Query vector DB with multiple queries and return deduplicated chunks."""
@@ -19,18 +18,17 @@ class ResponseCollector:
         return list(set(relevant_chunks))
 
     def _ask_llm(self, name, prompt, chunks, max_tokens=MAX_TOKENS):
-        """Send prompt + chunks to the LLM, print and record chat history. Returns raw response string."""
+        """Send prompt + chunks to the LLM. Each call is independent. Returns raw response string."""
         full_prompt = f"{prompt}\n\n" + "\n\n---\n\n".join(chunks)
-        self._add_to_chat_history("user", full_prompt)
+        messages = [{"role": "user", "content": full_prompt}]
 
         response = self.llm.chat.completions.create(
             model=OPEN_AI_MODEL,
-            messages=self.chat_history,
+            messages=messages,
             max_tokens=max_tokens,
         )
         res = response.choices[0].message.content
         print(f"OPEN AI RESPONSE {name}: ", res)
-        self._add_to_chat_history("assistant", res)
         return res
 
     def _store_int(self, key, res, valid_values=("0", "1", "-1")):
@@ -458,5 +456,3 @@ Return a brief description of the fee estimation source (e.g., "Bitcoin Core est
 Do not return any other text.""",
         )
 
-    def _add_to_chat_history(self, role: str, content: str):
-        self.chat_history.append({"role": role, "content": content})
