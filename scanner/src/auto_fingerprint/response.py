@@ -2,6 +2,74 @@ import openai
 from auto_fingerprint.vector_db import QuadrantClient
 from auto_fingerprint.consts import OPEN_AI_MODEL, MAX_TOKENS
 
+SYSTEM_PROMPT = """You are a Bitcoin wallet fingerprinting analyst. You analyze wallet source code \
+to determine transaction construction behaviors that can identify which wallet software created a transaction.
+
+These fingerprints include: transaction version, input/output types, BIP69 sorting, low-R signature \
+grinding, nLockTime anti-fee-sniping, nSequence values, change output positioning, RBF signaling, \
+fee estimation sources, and more.
+
+You will be given extracted source code functions from a wallet and asked specific questions about \
+its behavior. Base your answer ONLY on the code provided. If the code does not contain enough \
+evidence, return -1.
+
+When answering, think step by step about what the code does, then provide ONLY the final answer \
+on the last line with no other text. For example, if asked for 1/0/-1, your entire response \
+should be just the number."""
+
+# Few-shot examples based on known Bitcoin Core behavior.
+# Used to calibrate the LLM on what correct analysis looks like.
+FEW_SHOT_EXAMPLES = [
+    {
+        "user": """Does the following code implement low-R signature grinding? Only return 1, 0, or -1 if unclear.
+
+bool CKey::Sign(const uint256 &hash, std::vector<unsigned char>& vchSig, bool grind, uint32_t test_case) const {
+    ...
+    unsigned char extra_entropy[32] = {0};
+    WriteLE32(extra_entropy, test_case);
+    secp256k1_ecdsa_sign(secp256k1_context_sign, &sig, hash.begin(), begin(), secp256k1_nonce_function_rfc6979, grind ? extra_entropy : nullptr);
+    ...
+    // Grind for low R
+    while (IsLowR(vchSig) == false && grind) {
+        test_case++;
+        ...
+    }
+}""",
+        "assistant": "1",
+    },
+    {
+        "user": """Does the following code implement BIP69 sorting? Only return 1, 0, or -1 if unclear.
+
+void CWallet::AvailableCoins(std::vector<COutput>& vCoins, ...) const {
+    ...
+    for (const auto& entry : mapWallet) {
+        ...
+        vCoins.push_back(COutput(pcoin, i, nDepth, ...));
+    }
+}
+
+// Shuffle outputs
+std::shuffle(vCoins.begin(), vCoins.end(), FastRandomContext());""",
+        "assistant": "0",
+    },
+    {
+        "user": """Analyze the following code to identify which Bitcoin transaction input types are supported.
+Return a list of just comma separated strings containing only the supported input types.
+If no input types can be determined, return -1. Do not return any other text.
+
+def serialize_input(self, txin):
+    if txin.script_type == 'p2pkh':
+        return self._serialize_p2pkh(txin)
+    elif txin.script_type in ('p2wpkh', 'p2wsh'):
+        return self._serialize_witness(txin)
+    elif txin.script_type == 'p2sh':
+        return self._serialize_p2sh(txin)
+    elif txin.script_type == 'p2wpkh-p2sh':
+        return self._serialize_p2sh_p2wpkh(txin)""",
+        "assistant": "P2PKH, P2SH, P2WPKH, P2WSH, P2SH-P2WPKH",
+    },
+]
+
 
 class ResponseCollector:
     def __init__(self, vector_db: QuadrantClient, llm: openai.OpenAI):
@@ -18,9 +86,14 @@ class ResponseCollector:
         return list(set(relevant_chunks))
 
     def _ask_llm(self, name, prompt, chunks, max_tokens=MAX_TOKENS):
-        """Send prompt + chunks to the LLM. Each call is independent. Returns raw response string."""
+        """Send prompt + chunks to the LLM with system prompt and few-shot examples. Returns raw response string."""
         full_prompt = f"{prompt}\n\n" + "\n\n---\n\n".join(chunks)
-        messages = [{"role": "user", "content": full_prompt}]
+
+        messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+        for example in FEW_SHOT_EXAMPLES:
+            messages.append({"role": "user", "content": example["user"]})
+            messages.append({"role": "assistant", "content": example["assistant"]})
+        messages.append({"role": "user", "content": full_prompt})
 
         response = self.llm.chat.completions.create(
             model=OPEN_AI_MODEL,
