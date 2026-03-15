@@ -1,88 +1,171 @@
 <!DOCTYPE html>
 <html lang="en">
-<!-- Design for this website was inspired by https://skibidi.cash -->
 
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Wallet Semantic Search</title>
+  <title>Wallet Fingerprints</title>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.15.6/styles/default.min.css">
-
-  <script src="https://unpkg.com/htmx.org@2.0.4"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+  <style>
+    body { background: #0a0a0a; }
+    table { border-collapse: collapse; }
+    th, td {
+      border: 1px solid #333;
+      padding: 6px 12px;
+      text-align: center;
+      white-space: nowrap;
+    }
+    th { position: sticky; top: 0; background: #1a1a2e; z-index: 10; }
+    th.row-header { position: sticky; left: 0; background: #1a1a2e; z-index: 20; text-align: left; }
+    td.row-header { position: sticky; left: 0; background: #111; z-index: 5; text-align: left; font-weight: 600; }
+    .category-row td { background: #1a1a2e; font-weight: bold; text-transform: uppercase; letter-spacing: 0.05em; }
+    .val-1 { color: #4ade80; }   /* green = yes/supported */
+    .val-0 { color: #f87171; }   /* red = no */
+    .val--1 { color: #6b7280; }  /* gray = unknown */
+    .val-text { color: #e2e8f0; font-size: 0.8rem; }
+  </style>
 </head>
 
-<body class="bg-black text-white font-mono">
-  <div class="max-w-3xl mx-auto p-6 space-y-10">
+<body class="text-white font-mono">
+  <div class="max-w-full mx-auto p-6 space-y-6">
     <header class="text-center">
-      <h1 class="text-4xl md:text-6xl font-bold text-pink-500">Wallet Semantic Search</h1>
-      <p class="mt-4 text-xl text-gray-300">A semantic search engine for Bitcoin wallets</p>
+      <h1 class="text-4xl md:text-5xl font-bold text-pink-500">Wallet Fingerprints</h1>
+      <p class="mt-2 text-lg text-gray-400">Bitcoin wallet transaction fingerprint comparison</p>
     </header>
-    <section>
-      <div class="mt-4">
-        <h2 class="font-bold text-lg text-yellow-200 mb-1">🔀 How it works</h2>
-        <ul class="list-disc ml-6 text-gray-300 space-y-2">
-          <li>Select a wallet from the dropdown</li>
-          <li>Type in a question about the wallet</li>
-          <li>Get an answer</li>
-          <p class="mt-2 text-gray-400 text-sm">
-            Under the hood, we use fancy vector embeddings to find the most relevant answers.
-          </p>
-      </div>
-    </section>
-    <section>
-      <h2 class="text-2xl font-bold text-green-400">Search Anything About a Bitcoin supported Wallet</h2>
-      <div class="mt-2 text-gray-300 flex flex-row" id="search-wrapper">
-        <div class="card" id="wallets-wrapper">
-          <div class="text-black p-2">
-            <select name="selected_wallet" id="selected_wallet">
-              {% for wallet in wallets %}
-              <option value="{{ wallet }}">{{ wallet }}</option>
-              {% endfor %}
-            </select>
-          </div>
-        </div>
-        <div class="p-2">
-          <div class="mb-4 text-black">
-            <input type="text" class="form-control" name="user_input" placeholder="Search Something" required>
-          </div>
-        </div>
-        <div class="p-2">
-          <button
-            class="bg-green-900 hover:bg-green-800 text-white font-bold py-2 px-4 rounded transition-colors duration-200"
-            hx-post="{{ url_for('submit') }}" hx-trigger="click" hx-target="#search-results" hx-swap="outerHTML"
-            hx-include="[name='user_input'], [name='selected_wallet']" hx-on:htmx:after-swap="highlightCode()">
-            Search
-          </button>
-        </div>
-      </div>
-    </section>
-    <section>
-      <h2 class="text-2xl font-bold text-green-400">Search Results</h2>
-      <div id="search-results">
 
-      </div>
+    <section class="max-w-2xl mx-auto text-gray-300 space-y-3 text-sm leading-relaxed">
+      <p>
+        Every Bitcoin wallet leaves a fingerprint. When software constructs a transaction it makes
+        dozens of small decisions — input ordering, locktime values, signature encoding, fee
+        estimation — that vary systematically across implementations. These patterns are observable
+        on-chain and allow an adversary to identify which wallet created a transaction, even without
+        any off-chain data.
+      </p>
+      <p>
+        This matters because wallet identification reveals information about the user: hardware
+        wallet usage suggests significant holdings, choice of wallet signals technical sophistication,
+        and consistent fingerprints let analysts link transactions across time. Roughly half of
+        recent Bitcoin transactions can be attributed to specific wallet software through these
+        heuristics alone
+        (<a href="https://ishaana.com/blog/wallet_fingerprinting/" class="text-pink-400 hover:underline">Bose 2023</a>).
+      </p>
+      <p>
+        For collaborative transactions like
+        <a href="https://github.com/payjoin/research-docs/blob/main/fingerprints/payjoin.md" class="text-pink-400 hover:underline">PayJoins</a>,
+        fingerprints are especially damaging. If the sender and receiver use different wallet
+        software, signature and script differences partition the inputs by owner — collapsing the
+        privacy back to a pair of regular transactions. Even when intra-transaction signals are
+        uniform, the analyst can look backward and forward in the transaction graph where each
+        wallet's fingerprints reappear.
+      </p>
+      <p>
+        This tool automates fingerprint extraction from wallet source code using vector embeddings
+        and LLM analysis, building the comparison table below.
+      </p>
     </section>
+
+    {% if wallets %}
+    <section class="overflow-auto max-h-screen">
+      <table class="mx-auto text-sm">
+        <thead>
+          <tr>
+            <th class="row-header">Heuristic</th>
+            {% for wallet in wallets %}
+            <th class="text-pink-400">{{ wallet }}</th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Independent -->
+          <tr class="category-row">
+            <td class="row-header text-yellow-300" colspan="{{ wallets|length + 1 }}">Independent</td>
+          </tr>
+          {% for heuristic in independent %}
+          <tr>
+            <td class="row-header text-gray-300">{{ heuristic.label }}</td>
+            {% for wallet in wallets %}
+              {% set val = fingerprints[wallet].get(heuristic.key, '') %}
+              {% if val is number %}
+                <td class="val-{{ val }}">{{ '✓' if val == 1 else ('✗' if val == 0 else '?' ) }}</td>
+              {% elif val %}
+                <td class="val-text">{{ val }}</td>
+              {% else %}
+                <td class="val--1">—</td>
+              {% endif %}
+            {% endfor %}
+          </tr>
+          {% endfor %}
+
+          <!-- Probabilistic -->
+          <tr class="category-row">
+            <td class="row-header text-yellow-300" colspan="{{ wallets|length + 1 }}">Probabilistic</td>
+          </tr>
+          {% for heuristic in probabilistic %}
+          <tr>
+            <td class="row-header text-gray-300">{{ heuristic.label }}</td>
+            {% for wallet in wallets %}
+              {% set val = fingerprints[wallet].get(heuristic.key, '') %}
+              {% if val is number %}
+                <td class="val-{{ val }}">{{ '✓' if val == 1 else ('✗' if val == 0 else '?' ) }}</td>
+              {% elif val %}
+                <td class="val-text">{{ val }}</td>
+              {% else %}
+                <td class="val--1">—</td>
+              {% endif %}
+            {% endfor %}
+          </tr>
+          {% endfor %}
+
+          <!-- Dependent -->
+          <tr class="category-row">
+            <td class="row-header text-yellow-300" colspan="{{ wallets|length + 1 }}">Dependent</td>
+          </tr>
+          {% for heuristic in dependent %}
+          <tr>
+            <td class="row-header text-gray-300">{{ heuristic.label }}</td>
+            {% for wallet in wallets %}
+              {% set val = fingerprints[wallet].get(heuristic.key, '') %}
+              {% if val is number %}
+                <td class="val-{{ val }}">{{ '✓' if val == 1 else ('✗' if val == 0 else '?' ) }}</td>
+              {% elif val %}
+                <td class="val-text">{{ val }}</td>
+              {% else %}
+                <td class="val--1">—</td>
+              {% endif %}
+            {% endfor %}
+          </tr>
+          {% endfor %}
+
+          <!-- Temporal -->
+          <tr class="category-row">
+            <td class="row-header text-yellow-300" colspan="{{ wallets|length + 1 }}">Temporal</td>
+          </tr>
+          {% for heuristic in temporal %}
+          <tr>
+            <td class="row-header text-gray-300">{{ heuristic.label }}</td>
+            {% for wallet in wallets %}
+              {% set val = fingerprints[wallet].get(heuristic.key, '') %}
+              {% if val is number %}
+                <td class="val-{{ val }}">{{ '✓' if val == 1 else ('✗' if val == 0 else '?' ) }}</td>
+              {% elif val %}
+                <td class="val-text">{{ val }}</td>
+              {% else %}
+                <td class="val--1">—</td>
+              {% endif %}
+            {% endfor %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+    {% else %}
+    <p class="text-center text-gray-500">No wallets found. Run the fingerprint scanner first.</p>
+    {% endif %}
+
     <footer class="text-center text-sm text-gray-500 border-t border-gray-700 pt-4">
-      &copy; 2025 Wallet Semantic Search. All rights reserved.
+      &copy; 2025 Wallet Fingerprints. All rights reserved.
     </footer>
   </div>
 </body>
-
-<script defer>
-  function highlightCode() {
-    console.log('highlightCode');
-    const codeBlocks = document.querySelectorAll('pre code');
-    codeBlocks.forEach(block => {
-      console.log(block);
-      hljs.highlightElement(block);
-    });
-  }
-
-  window.document.body.addEventListener('htmx:afterSwap', function (event) {
-    highlightCode();
-  });
-</script>
 
 </html>
