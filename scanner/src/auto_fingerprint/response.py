@@ -99,6 +99,8 @@ class ResponseCollector:
             model=OPEN_AI_MODEL,
             messages=messages,
             max_tokens=max_tokens,
+            temperature=0,
+            seed=21000000,
         )
         res = response.choices[0].message.content
         print(f"OPEN AI RESPONSE {name}: ", res)
