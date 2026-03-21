@@ -28,13 +28,19 @@ qdrant/qdrant
 4.Create embeddings for some source code
 
 ```bash
-poetry run python src/auto_fingerprint/main.py embed --dir_to_read test_source_code/electrum/ --vector_db_uri "localhost:6333"
+poetry run python src/auto_fingerprint/main.py embed --dir_to_read test_source_code/electrum/ --vector_db_uri "http://localhost:6333"
 ```
 
-1. Create fingerprints
+5. Create fingerprints
 
 ```bash
-poetry run python src/auto_fingerprint/main.py fingerprint --dir_to_read test_source_code/electrum/ --vector_db_uri "localhost:6333"
+poetry run python src/auto_fingerprint/main.py fingerprint --dir_to_read test_source_code/electrum/ --vector_db_uri "http://localhost:6333"
+```
+
+6. Export fingerprints as JSON (no OpenAI key needed)
+
+```bash
+poetry run python src/auto_fingerprint/main.py export --vector_db_uri "http://localhost:6333" --output ../server/static/fingerprints.json --pretty
 ```
 
 ### TODO
