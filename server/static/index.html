@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wallet Fingerprints</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <style>
+    body { background: #0a0a0a; }
+    table { border-collapse: collapse; }
+    th, td {
+      border: 1px solid #333;
+      padding: 6px 12px;
+      text-align: center;
+      white-space: nowrap;
+    }
+    th { position: sticky; top: 0; background: #1a1a2e; z-index: 10; }
+    th.row-header { position: sticky; left: 0; background: #1a1a2e; z-index: 20; text-align: left; }
+    td.row-header { position: sticky; left: 0; background: #111; z-index: 5; text-align: left; font-weight: 600; }
+    .category-row td { background: #1a1a2e; font-weight: bold; text-transform: uppercase; letter-spacing: 0.05em; }
+    .val-1 { color: #4ade80; }   /* yes */
+    .val-0 { color: #f87171; }   /* no */
+    .val--1 { color: #6b7280; }  /* unknown */
+    .val-text { color: #e2e8f0; font-size: 0.85rem; }
+  </style>
+</head>
+<body class="text-white font-mono">
+  <div class="max-w-full mx-auto p-6 space-y-6">
+    <header class="text-center">
+      <h1 class="text-4xl md:text-5xl font-bold text-pink-500">Wallet Fingerprints</h1>
+      <p class="mt-2 text-lg text-gray-400">Static export of Bitcoin wallet transaction fingerprints</p>
+    </header>
+
+    <section id="meta" class="max-w-2xl mx-auto text-gray-300 space-y-1 text-sm leading-relaxed"></section>
+
+    <section id="table-wrapper" class="overflow-auto max-h-screen hidden">
+      <table id="fingerprint-table" class="mx-auto text-sm"></table>
+    </section>
+
+    <p id="status" class="text-center text-gray-400 text-sm">Loading fingerprints...</p>
+  </div>
+
+  <script>
+    const table = document.getElementById('fingerprint-table');
+    const statusEl = document.getElementById('status');
+    const metaEl = document.getElementById('meta');
+    const wrapperEl = document.getElementById('table-wrapper');
+
+    function renderMeta(exportData) {
+      const generated = exportData.generated_at ? new Date(exportData.generated_at).toUTCString() : 'unknown';
+      metaEl.innerHTML = `
+        <p><span class="text-gray-500">Generated:</span> ${generated}</p>
+        <p><span class="text-gray-500">Vector DB:</span> ${exportData.vector_db_uri || 'unknown'}</p>
+        <p class="text-gray-400 text-xs">Source: fingerprints.json</p>
+      `;
+    }
+
+    function renderHeader(wallets) {
+      const thead = document.createElement('thead');
+      const row = document.createElement('tr');
+      const th = document.createElement('th');
+      th.className = 'row-header';
+      th.textContent = 'Heuristic';
+      row.appendChild(th);
+
+      wallets.forEach(({ name }) => {
+        const walletTh = document.createElement('th');
+        walletTh.className = 'text-pink-400';
+        walletTh.textContent = name;
+        row.appendChild(walletTh);
+      });
+
+      thead.appendChild(row);
+      return thead;
+    }
+
+    function formatValue(val) {
+      if (typeof val === 'number') {
+        const symbol = val === 1 ? 'YES' : val === 0 ? 'NO' : '?';
+        return { className: `val-${val}`, text: symbol };
+      }
+      if (typeof val === 'string' && val.trim().length > 0) {
+        return { className: 'val-text', text: val };
+      }
+      if (val && typeof val === 'object' && val.error) {
+        return { className: 'val-text text-red-300', text: val.error };
+      }
+      return { className: 'val--1', text: '--' };
+    }
+
+    function renderCategoryRows(heuristics, wallets, fingerprints) {
+      const tbody = document.createElement('tbody');
+      const categories = [
+        { key: 'independent', label: 'Independent' },
+        { key: 'probabilistic', label: 'Probabilistic' },
+        { key: 'dependent', label: 'Dependent' },
+        { key: 'temporal', label: 'Temporal' },
+      ];
+
+      categories.forEach(({ key, label }) => {
+        const categoryRow = document.createElement('tr');
+        categoryRow.className = 'category-row';
+        const cell = document.createElement('td');
+        cell.className = 'row-header text-yellow-300';
+        cell.colSpan = wallets.length + 1;
+        cell.textContent = label;
+        categoryRow.appendChild(cell);
+        tbody.appendChild(categoryRow);
+
+        (heuristics[key] || []).forEach((heuristic) => {
+          const row = document.createElement('tr');
+          const headerCell = document.createElement('td');
+          headerCell.className = 'row-header text-gray-300';
+          headerCell.textContent = heuristic.label;
+          row.appendChild(headerCell);
+
+          wallets.forEach(({ name }) => {
+            const cell = document.createElement('td');
+            const val = fingerprints[name]?.[heuristic.key];
+            const { className, text } = formatValue(val);
+            cell.className = className;
+            cell.textContent = text;
+            row.appendChild(cell);
+          });
+
+          tbody.appendChild(row);
+        });
+      });
+
+      return tbody;
+    }
+
+    function renderTable(exportData) {
+      const wallets = exportData.wallets || [];
+      const heuristics = exportData.heuristics || {};
+      if (wallets.length === 0) {
+        statusEl.textContent = 'No wallets found. Run the scanner and export fingerprints first.';
+        return;
+      }
+
+      const fingerprintMap = Object.fromEntries(
+        wallets.map((wallet) => [wallet.name, wallet.fingerprints || {}]),
+      );
+
+      table.innerHTML = '';
+      table.appendChild(renderHeader(wallets));
+      table.appendChild(renderCategoryRows(heuristics, wallets, fingerprintMap));
+      statusEl.textContent = '';
+      wrapperEl.classList.remove('hidden');
+    }
+
+    async function load() {
+      try {
+        const res = await fetch('fingerprints.json', { cache: 'no-cache' });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        renderMeta(data);
+        renderTable(data);
+      } catch (err) {
+        statusEl.textContent = `Unable to load fingerprints.json (${err}).`;
+      }
+    }
+
+    load();
+  </script>
+</body>
+</html>
