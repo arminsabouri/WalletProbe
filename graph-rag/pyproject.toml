@@ -1,0 +1,20 @@
+[project]
+name = "graph-rag"
+version = "0.1.0"
+description = "Graph-based retrieval augmented generation experiments."
+authors = [{ name = "Armin Sabouri", email = "me@arminsabouri.com" }]
+readme = "README.md"
+requires-python = ">=3.12,<4.0"
+dependencies = [
+    "code-graph-rag[treesitter-full,semantic]",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/graph_rag"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.uv.sources]
+code-graph-rag = { path = "/home/hash160/dev/code-graph-rag" }
