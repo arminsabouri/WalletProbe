@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import shutil
 from pathlib import Path
 from typing import Iterable
 
@@ -46,6 +47,10 @@ def run_graph_build(
     ) as ingestor:
         if clean:
             ingestor.clean_database()
+            qdrant_path = Path(settings.QDRANT_DB_PATH)
+            if qdrant_path.exists():
+                shutil.rmtree(qdrant_path)
+                logger.info(f"Deleted Qdrant storage at {qdrant_path}")
 
         ingestor.ensure_constraints()
         parsers, queries = load_parsers()

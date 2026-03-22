@@ -1,7 +1,9 @@
 import argparse
+import os
+import sys
 from pathlib import Path
 
-from graph_rag.cgr_pipeline import run_graph_build
+from loguru import logger
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -39,6 +41,48 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Clean the Memgraph database before ingesting.",
     )
+    graph_parser.add_argument(
+        "--log-level",
+        default="INFO",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR"],
+        help="Log level (default: INFO).",
+    )
+    graph_parser.add_argument(
+        "--embedding-provider",
+        default=None,
+        choices=["unixcoder", "voyage"],
+        help="Embedding provider: 'unixcoder' (local, default) or 'voyage' (Voyage AI API, requires VOYAGE_API_KEY).",
+    )
+
+    fp_parser = subparsers.add_parser(
+        "fingerprint",
+        help="Run heuristic fingerprinting against a built graph.",
+    )
+    fp_parser.add_argument(
+        "--project-name",
+        required=True,
+        help="Project name used during graph build.",
+    )
+    fp_parser.add_argument(
+        "--output",
+        default="fingerprints.json",
+        help="Output JSON file path (default: fingerprints.json).",
+    )
+    fp_parser.add_argument(
+        "--pretty",
+        action="store_true",
+        help="Pretty-print the output JSON.",
+    )
+    fp_parser.add_argument(
+        "--qdrant-path",
+        default=None,
+        help="Path to local Qdrant DB (overrides QDRANT_DB_PATH env var).",
+    )
+    fp_parser.add_argument(
+        "--model",
+        default="claude-sonnet-4-6",
+        help="Claude model to use (default: claude-sonnet-4-6).",
+    )
 
     return parser
 
@@ -48,6 +92,11 @@ def main() -> None:
     args = parser.parse_args()
 
     if args.command == "graph":
+        logger.remove()
+        logger.add(sys.stderr, level=args.log_level)
+        if args.embedding_provider:
+            os.environ["EMBEDDING_PROVIDER"] = args.embedding_provider
+        from graph_rag.cgr_pipeline import run_graph_build
         repo_path = Path(args.repo_path)
         run_graph_build(
             repo_path=repo_path,
@@ -57,6 +106,16 @@ def main() -> None:
             clean=args.clean,
         )
         print("Graph build complete (stored in Memgraph).")
+
+    elif args.command == "fingerprint":
+        from graph_rag.fingerprint_pipeline import run_fingerprint
+        run_fingerprint(
+            project_name=args.project_name,
+            output_path=args.output,
+            pretty=args.pretty,
+            qdrant_db_path=args.qdrant_path,
+            model=args.model,
+        )
 
 
 if __name__ == "__main__":

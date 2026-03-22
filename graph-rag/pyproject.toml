@@ -6,7 +6,9 @@ authors = [{ name = "Armin Sabouri", email = "me@arminsabouri.com" }]
 readme = "README.md"
 requires-python = ">=3.12,<4.0"
 dependencies = [
-    "code-graph-rag[treesitter-full,semantic]",
+    "code-graph-rag[treesitter-full]",
+    "anthropic>=0.40.0",
+    "voyageai>=0.3.0",
 ]
 
 [tool.hatch.build.targets.wheel]
@@ -17,4 +19,5 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.uv.sources]
-code-graph-rag = { path = "/home/hash160/dev/code-graph-rag" }
+code-graph-rag = { path = "/home/hash160/dev/code-graph-rag", editable = true }
+

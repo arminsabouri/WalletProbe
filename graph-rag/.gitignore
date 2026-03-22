@@ -214,4 +214,8 @@ marimo/_lsp/
 __marimo__/
 
 # Streamlit
-.streamlit/secrets.toml
+.streamlit/secrets.tom>l
+
+
+# Vector DB
+.qdrant_code_embeddings/
