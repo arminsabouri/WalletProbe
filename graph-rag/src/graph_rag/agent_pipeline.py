@@ -54,9 +54,12 @@ def _build_agent_prompt(heuristic: dict) -> str:
     )
 
 
+_PARSE_ERROR = object()  # sentinel for unparseable agent response
+
+
 def _parse_result(raw: str | None, heuristic: dict) -> int | str:
     if not raw:
-        return -1
+        return _PARSE_ERROR
     # Claude often explains before giving the answer — take the last non-empty line
     lines = [l.strip() for l in raw.strip().splitlines() if l.strip()]
     text = lines[-1] if lines else ""
@@ -66,9 +69,9 @@ def _parse_result(raw: str | None, heuristic: dict) -> int | str:
             val = int(text)
             if valid is None:
                 return val
-            return val if str(val) in valid else -1
+            return val if str(val) in valid else _PARSE_ERROR
         except (ValueError, TypeError):
-            return -1
+            return _PARSE_ERROR
     return text
 
 
@@ -94,6 +97,7 @@ async def _analyze_heuristic(
     )
 
     result_text: str | None = None
+    agent_error: bool = False
     transcript: list[dict] | None = [] if save_transcripts else None
     async with semaphore:
         try:
@@ -103,13 +107,20 @@ async def _analyze_heuristic(
                 if isinstance(message, ResultMessage):
                     result_text = message.result
                     if message.is_error:
+                        agent_error = True
                         logger.warning(f"[{key}] agent finished with error: {result_text!r}")
         except Exception as e:
             logger.warning(f"[{key}] agent exception: {e}")
-            return -1, transcript
+            return -2, transcript
+
+    if agent_error:
+        return -2, transcript
 
     logger.debug(f"[{key}] raw result: {result_text!r}")
     parsed = _parse_result(result_text, heuristic)
+    if parsed is _PARSE_ERROR:
+        logger.warning(f"[{key}] could not parse agent response: {result_text!r}")
+        return -2, transcript
     logger.info(f"[{key}] = {parsed!r}")
     return parsed, transcript
 
