@@ -9,6 +9,7 @@ dependencies = [
     "code-graph-rag[treesitter-full]",
     "anthropic>=0.40.0",
     "voyageai>=0.3.0",
+    "claude-agent-sdk",
 ]
 
 [tool.hatch.build.targets.wheel]
