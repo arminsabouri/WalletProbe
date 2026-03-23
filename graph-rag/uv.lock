@@ -465,7 +465,7 @@ wheels = [
 [[package]]
 name = "code-graph-rag"
 version = "0.0.129"
-source = { editable = "../../code-graph-rag" }
+source = { git = "https://github.com/arminsabouri/code-graph-rag.git?branch=allow-extra#cd0607cee8a2b839ae4f727fcc776932b653e150" }
 dependencies = [
     { name = "click" },
     { name = "defusedxml" },
@@ -499,68 +499,6 @@ treesitter-full = [
     { name = "tree-sitter-scala" },
     { name = "tree-sitter-typescript" },
 ]
-
-[package.metadata]
-requires-dist = [
-    { name = "click", specifier = ">=8.0.0" },
-    { name = "defusedxml", specifier = ">=0.7.1" },
-    { name = "diff-match-patch", specifier = ">=20241021" },
-    { name = "huggingface-hub", extras = ["hf-xet"], specifier = ">=0.36.0" },
-    { name = "loguru", specifier = ">=0.7.3" },
-    { name = "mcp", specifier = ">=1.21.1" },
-    { name = "prompt-toolkit", specifier = ">=3.0.0" },
-    { name = "protobuf", specifier = ">=5.27.0" },
-    { name = "pydantic-ai", specifier = ">=1.70.0" },
-    { name = "pydantic-settings", specifier = ">=2.0.0" },
-    { name = "pymgclient", specifier = ">=1.4.0" },
-    { name = "pytest", marker = "extra == 'test'", specifier = ">=8.4.1" },
-    { name = "pytest-asyncio", marker = "extra == 'test'", specifier = ">=1.0.0" },
-    { name = "pytest-cov", marker = "extra == 'test'", specifier = ">=4.0.0" },
-    { name = "pytest-xdist", marker = "extra == 'test'", specifier = ">=3.8.0" },
-    { name = "python-dotenv", specifier = ">=1.1.0" },
-    { name = "qdrant-client", marker = "extra == 'semantic'", specifier = ">=1.9.0" },
-    { name = "rich", specifier = ">=13.7.1" },
-    { name = "testcontainers", marker = "extra == 'test'", specifier = ">=4.9.0" },
-    { name = "toml", specifier = ">=0.10.2" },
-    { name = "torch", marker = "extra == 'semantic'", specifier = ">=2.6.0" },
-    { name = "transformers", marker = "extra == 'semantic'", specifier = ">=4.0.0" },
-    { name = "tree-sitter", specifier = "==0.25.2" },
-    { name = "tree-sitter-cpp", marker = "extra == 'treesitter-full'", specifier = ">=0.23.0" },
-    { name = "tree-sitter-go", marker = "extra == 'treesitter-full'", specifier = ">=0.23.4" },
-    { name = "tree-sitter-java", marker = "extra == 'treesitter-full'", specifier = ">=0.23.5" },
-    { name = "tree-sitter-javascript", marker = "extra == 'treesitter-full'", specifier = ">=0.23.1" },
-    { name = "tree-sitter-lua", marker = "extra == 'treesitter-full'", specifier = ">=0.0.19" },
-    { name = "tree-sitter-python", specifier = ">=0.23.6" },
-    { name = "tree-sitter-python", marker = "extra == 'treesitter-full'", specifier = ">=0.23.6" },
-    { name = "tree-sitter-rust", marker = "extra == 'treesitter-full'", specifier = ">=0.24.0" },
-    { name = "tree-sitter-scala", marker = "extra == 'treesitter-full'", specifier = ">=0.24.0" },
-    { name = "tree-sitter-typescript", marker = "extra == 'treesitter-full'", specifier = ">=0.23.2" },
-    { name = "typer", specifier = ">=0.12.5" },
-    { name = "watchdog", specifier = ">=6.0.0" },
-]
-provides-extras = ["test", "treesitter-full", "semantic"]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "bandit", specifier = ">=1.9.2" },
-    { name = "coverage", specifier = ">=7.13.0" },
-    { name = "pre-commit", specifier = ">=4.2.0" },
-    { name = "pyinstaller", specifier = ">=6.14.1" },
-    { name = "pylint", specifier = ">=4.0.4" },
-    { name = "radon", specifier = ">=6.0.1" },
-    { name = "ruff", specifier = ">=0.5.5" },
-    { name = "semgrep", specifier = ">=1.79.0" },
-    { name = "ty", specifier = ">=0.0.7" },
-    { name = "types-protobuf", specifier = ">=5.0.0" },
-    { name = "types-toml", specifier = ">=0.10.8.20240310" },
-    { name = "vulture", specifier = ">=2.14" },
-]
-docs = [
-    { name = "mkdocs", specifier = ">=1.6.1,<2" },
-    { name = "mkdocs-material", specifier = ">=9.7.3" },
-    { name = "mkdocs-minify-plugin", specifier = ">=0.8.0" },
-]
-fuzz = [{ name = "atheris", specifier = ">=2.3.0" }]
 
 [[package]]
 name = "cohere"
@@ -1029,7 +967,7 @@ dependencies = [
 requires-dist = [
     { name = "anthropic", specifier = ">=0.40.0" },
     { name = "claude-agent-sdk" },
-    { name = "code-graph-rag", extras = ["treesitter-full"], editable = "../../code-graph-rag" },
+    { name = "code-graph-rag", extras = ["treesitter-full"], git = "https://github.com/arminsabouri/code-graph-rag.git?branch=allow-extra" },
     { name = "voyageai", specifier = ">=0.3.0" },
 ]
 

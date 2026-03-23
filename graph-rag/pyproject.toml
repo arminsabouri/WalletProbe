@@ -20,5 +20,5 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.uv.sources]
-code-graph-rag = { path = "/home/hash160/dev/code-graph-rag", editable = true }
+code-graph-rag = { git = "https://github.com/arminsabouri/code-graph-rag.git", branch = "allow-extra" }
 
